@@ -7,6 +7,7 @@ import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AppStateProvider } from "./state/AppStateProvider";
 import { FocusTimerProvider } from "./features/timer/TimerProvider";
+import { ThemeProvider } from "./state/ThemeProvider";
 
 function AppInner() {
   const [view, setView] = useState<AppViewKey>("dashboard");
@@ -40,9 +41,11 @@ function AppInner() {
 function App() {
   return (
     <AppStateProvider>
-      <FocusTimerProvider>
-        <AppInner />
-      </FocusTimerProvider>
+      <ThemeProvider>
+        <FocusTimerProvider>
+          <AppInner />
+        </FocusTimerProvider>
+      </ThemeProvider>
     </AppStateProvider>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { forgetFocusAutoCompleteNotify } from "../../../lib/focusCompletionNotificationDedup";
 import type { TimerMode, TimerSession } from "../../../types/models";
 
 export function useFocusTimer() {
@@ -51,7 +52,7 @@ export function useFocusTimer() {
     };
   }, [isRunning, mode, targetSeconds]);
 
-  function startStopwatch() {
+  function startStopwatch(categoryId?: string) {
     setMode("stopwatch");
     setTargetSeconds(null);
     setSessionReadyToLog(false);
@@ -68,13 +69,19 @@ export function useFocusTimer() {
 
       const startedAt = new Date().toISOString();
       setElapsedSeconds(0);
-      return { id: `ts-${Date.now()}`, mode: "stopwatch", startedAt, durationSeconds: 0 };
+      return {
+        id: `ts-${Date.now()}`,
+        mode: "stopwatch",
+        categoryId,
+        startedAt,
+        durationSeconds: 0,
+      };
     });
 
     setIsRunning(true);
   }
 
-  function startPreset(minutes: number) {
+  function startPreset(minutes: number, categoryId?: string) {
     const seconds = minutes * 60;
     setMode("focus");
     setSessionReadyToLog(false);
@@ -103,6 +110,7 @@ export function useFocusTimer() {
       id: `ts-${Date.now()}`,
       mode: "focus",
       presetMinutes: minutes,
+      categoryId,
       startedAt,
       durationSeconds: 0,
     });
@@ -150,6 +158,7 @@ export function useFocusTimer() {
   }
 
   function reset() {
+    if (lastSession?.id) forgetFocusAutoCompleteNotify(lastSession.id);
     setIsRunning(false);
     setMode("idle");
     setElapsedSeconds(0);
@@ -161,6 +170,7 @@ export function useFocusTimer() {
 
   function consumeSessionForLogging() {
     const session = lastSession;
+    if (session?.id) forgetFocusAutoCompleteNotify(session.id);
     setSessionReadyToLog(false);
     setLastSession(null);
     setIsRunning(false);

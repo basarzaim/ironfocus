@@ -1,6 +1,11 @@
 import { PRODUCT_INFO } from "../config/productInfo";
+import { useTheme } from "../state/ThemeProvider";
 
 export function SettingsPage() {
+  const { theme, setTheme, colorMode, setColorMode } = useTheme();
+  const isWife = theme === "wife";
+  const isLight = colorMode === "light";
+
   return (
     <div className="flex h-full flex-col gap-4">
       <header className="mb-2 flex items-baseline justify-between">
@@ -37,8 +42,75 @@ export function SettingsPage() {
         </div>
 
         <div className="mt-4 border-t border-neutral-800 pt-3 text-[11px] text-neutral-500">
-          Settings such as data retention, export, theme tuning, and
-          persistence will be introduced in future versions.
+          <div className="mb-2 flex items-center justify-between">
+            <span className="font-semibold text-neutral-300">
+              Theme (local only)
+            </span>
+            <div className="inline-flex rounded-full border border-neutral-700 bg-neutral-950/60 p-[2px] text-[11px]">
+              <button
+                type="button"
+                onClick={() => setTheme("classic")}
+                className={`rounded-full px-3 py-1 ${
+                  !isWife
+                    ? "bg-neutral-200 text-neutral-900"
+                    : "text-neutral-400 hover:text-neutral-100"
+                }`}
+              >
+                Classic
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme("wife")}
+                className={`rounded-full px-3 py-1 ${
+                  isWife
+                    ? "bg-pink-500/90 text-neutral-50"
+                    : "text-neutral-400 hover:text-neutral-100"
+                }`}
+              >
+                Wife edition
+              </button>
+            </div>
+          </div>
+          <div className="mt-1 text-[11px] text-neutral-500">
+            This toggle is purely local; it switches between the original amber
+            accent and the pink "wife edition" theme.
+          </div>
+        </div>
+
+        <div className="mt-4 border-t border-neutral-800 pt-3 text-[11px] text-neutral-500">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="font-semibold text-neutral-300">
+              Color mode (local only)
+            </span>
+            <div className="inline-flex rounded-full border border-neutral-700 bg-neutral-950/60 p-[2px] text-[11px]">
+              <button
+                type="button"
+                onClick={() => setColorMode("dark")}
+                className={`rounded-full px-3 py-1 ${
+                  !isLight
+                    ? "bg-neutral-200 text-neutral-900"
+                    : "text-neutral-400 hover:text-neutral-100"
+                }`}
+              >
+                Dark
+              </button>
+              <button
+                type="button"
+                onClick={() => setColorMode("light")}
+                className={`rounded-full px-3 py-1 ${
+                  isLight
+                    ? "bg-neutral-200 text-neutral-900"
+                    : "text-neutral-400 hover:text-neutral-100"
+                }`}
+              >
+                Light
+              </button>
+            </div>
+          </div>
+          <div className="mt-1 text-[11px] text-neutral-500">
+            Switches the overall UI between dark and light backgrounds while
+            keeping your selected accent theme.
+          </div>
         </div>
       </section>
     </div>

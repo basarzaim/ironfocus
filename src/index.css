@@ -10,18 +10,29 @@ body,
 
 body {
   margin: 0;
-  background-color: #111111;
+  background-color: #0a0a0a;
   color: #f5f5f5;
 }
 
-/* Dark scrollbars (app-wide) */
-html {
+/* ============================================================
+   DARK MODE (default) — unchanged, tokens for reference
+   ============================================================ */
+html,
+html.mode-dark {
   color-scheme: dark;
-  scrollbar-color: rgba(245, 158, 11, 0.55) rgba(10, 10, 10, 0.9);
   scrollbar-width: thin;
 }
 
-/* WebKit */
+html.theme-classic,
+html.mode-dark.theme-classic {
+  scrollbar-color: rgba(245, 158, 11, 0.55) rgba(10, 10, 10, 0.9);
+}
+
+html.theme-wife,
+html.mode-dark.theme-wife {
+  scrollbar-color: rgba(236, 72, 153, 0.55) rgba(10, 10, 10, 0.9);
+}
+
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -31,12 +42,408 @@ html {
   background: rgba(10, 10, 10, 0.9);
 }
 
-*::-webkit-scrollbar-thumb {
+html.theme-classic *::-webkit-scrollbar-thumb,
+html.mode-dark.theme-classic *::-webkit-scrollbar-thumb {
   background: rgba(245, 158, 11, 0.35);
   border: 2px solid rgba(10, 10, 10, 0.9);
   border-radius: 999px;
 }
 
-*::-webkit-scrollbar-thumb:hover {
+html.theme-classic *::-webkit-scrollbar-thumb:hover,
+html.mode-dark.theme-classic *::-webkit-scrollbar-thumb:hover {
   background: rgba(245, 158, 11, 0.55);
+}
+
+html.theme-wife *::-webkit-scrollbar-thumb,
+html.mode-dark.theme-wife *::-webkit-scrollbar-thumb {
+  background: rgba(236, 72, 153, 0.35);
+  border: 2px solid rgba(10, 10, 10, 0.9);
+  border-radius: 999px;
+}
+
+html.theme-wife *::-webkit-scrollbar-thumb:hover,
+html.mode-dark.theme-wife *::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 72, 153, 0.55);
+}
+
+/* ============================================================
+   LIGHT MODE — SILVER PREMIUM THEME
+   Clean, industrial-minimal, desktop-native aesthetic.
+   Dark mode is fully preserved and unaffected.
+   ============================================================ */
+
+html.mode-light {
+  color-scheme: light;
+
+  /* === SURFACE TOKENS ================================================= */
+  --if-bg-app:       #dfe1e6;  /* cool silver shell — the page background   */
+  --if-bg-sidebar:   #cacdd5;  /* navigation rail — deeper silver            */
+  --if-bg-card:      #e8eaee;  /* panel / card surface                       */
+  --if-bg-elevated:  #f0f1f4;  /* elevated: inputs, chart areas, inner panes */
+  --if-bg-input:     #e4e6ea;  /* text/select inputs                         */
+  --if-bg-hover:     rgba(0, 0, 0, 0.05);
+  --if-bg-active:    rgba(0, 0, 0, 0.09);
+  --if-bg-selected:  rgba(245, 158, 11, 0.13);
+
+  /* === BORDER TOKENS ================================================== */
+  --if-border-subtle:   rgba(0, 0, 0, 0.07);
+  --if-border-default:  rgba(0, 0, 0, 0.12);
+  --if-border-strong:   rgba(0, 0, 0, 0.20);
+
+  /* === TEXT TOKENS ==================================================== */
+  --if-text-primary:      #17171a;  /* charcoal — not pitch black          */
+  --if-text-secondary:    #3f3f48;  /* slate — subdued but readable         */
+  --if-text-muted:        #6a6a76;  /* calm mid-gray for labels & captions  */
+  --if-text-placeholder:  #9a9aa6;  /* light gray for placeholder strings   */
+
+  /* === SHADOW TOKENS ================================================== */
+  --if-shadow-card:     0 1px 3px rgba(0, 0, 0, 0.07),
+                        0 1px 2px rgba(0, 0, 0, 0.04);
+  --if-shadow-elevated: 0 2px 8px rgba(0, 0, 0, 0.09),
+                        0 1px 3px rgba(0, 0, 0, 0.05);
+  --if-shadow-inset:    inset 0 1px 3px rgba(0, 0, 0, 0.06);
+  --if-shadow-modal:    0 8px 32px rgba(0, 0, 0, 0.14),
+                        0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- BASE ------------------------------------------------------------ */
+html.mode-light body {
+  background-color: var(--if-bg-app);
+  color: var(--if-text-primary);
+}
+
+/* ---- APP SHELL ROOT -------------------------------------------------- */
+html.mode-light .if-app-shell {
+  background-color: var(--if-bg-app) !important;
+  color: var(--if-text-primary) !important;
+}
+
+/* ---- SIDEBAR --------------------------------------------------------- */
+html.mode-light .if-sidebar {
+  background-color: var(--if-bg-sidebar) !important;
+  border-right-color: var(--if-border-default) !important;
+}
+
+html.mode-light .if-sidebar-item-active {
+  background-color: var(--if-bg-active) !important;
+  color: var(--if-text-primary) !important;
+}
+
+html.mode-light .if-sidebar-item-inactive {
+  color: var(--if-text-muted) !important;
+}
+
+html.mode-light .if-sidebar-item-inactive:hover {
+  background-color: var(--if-bg-hover) !important;
+  color: var(--if-text-primary) !important;
+}
+
+html.mode-light .if-sidebar-logo-box {
+  background-color: var(--if-bg-elevated) !important;
+  border-color: var(--if-border-default) !important;
+}
+
+html.mode-light .if-sidebar-brand {
+  color: var(--if-text-secondary) !important;
+}
+
+html.mode-light .if-sidebar-footer {
+  color: var(--if-text-muted) !important;
+}
+
+/* ---- TEXT UTILITIES -------------------------------------------------- */
+html.mode-light .text-neutral-50,
+html.mode-light .text-neutral-100,
+html.mode-light .text-neutral-200,
+html.mode-light .text-neutral-300 {
+  color: var(--if-text-primary) !important;
+}
+
+html.mode-light .text-neutral-400 {
+  color: var(--if-text-secondary) !important;
+}
+
+html.mode-light .text-neutral-500,
+html.mode-light .text-neutral-600 {
+  color: var(--if-text-muted) !important;
+}
+
+html.mode-light .placeholder\:text-neutral-600::placeholder {
+  color: var(--if-text-placeholder) !important;
+}
+
+/* ---- BACKGROUND UTILITIES -------------------------------------------- */
+
+/* The app shell root bg */
+html.mode-light .bg-neutral-950 {
+  background-color: var(--if-bg-app) !important;
+}
+
+/* Sidebar (bg-black/90) */
+html.mode-light .bg-black\/90 {
+  background-color: var(--if-bg-sidebar) !important;
+}
+
+/* Cards and main panels */
+html.mode-light .bg-neutral-900\/80,
+html.mode-light .bg-neutral-900\/60 {
+  background-color: var(--if-bg-card) !important;
+  box-shadow: var(--if-shadow-card);
+}
+
+html.mode-light .bg-neutral-900 {
+  background-color: var(--if-bg-card) !important;
+}
+
+/* Inputs, chart containers, and elevated inner surfaces */
+html.mode-light .bg-neutral-950\/60,
+html.mode-light .bg-neutral-950\/80,
+html.mode-light .bg-neutral-950\/95 {
+  background-color: var(--if-bg-elevated) !important;
+  box-shadow: var(--if-shadow-inset);
+}
+
+html.mode-light .bg-neutral-950\/40 {
+  background-color: rgba(230, 232, 236, 0.80) !important;
+}
+
+/* Active / selected item bg (nav, segmented controls) */
+html.mode-light .bg-neutral-800 {
+  background-color: var(--if-bg-active) !important;
+}
+
+/* Hover states */
+html.mode-light .hover\:bg-neutral-800:hover {
+  background-color: var(--if-bg-active) !important;
+}
+
+html.mode-light .hover\:bg-neutral-900:hover,
+html.mode-light .hover\:bg-neutral-800:hover {
+  background-color: var(--if-bg-hover) !important;
+}
+
+/* Disabled button backgrounds */
+html.mode-light .disabled\:bg-neutral-900:disabled {
+  background-color: var(--if-bg-card) !important;
+}
+
+/* ---- BORDER UTILITIES ------------------------------------------------ */
+html.mode-light .border-neutral-800,
+html.mode-light .border-neutral-800\/80,
+html.mode-light .border-neutral-800\/70 {
+  border-color: var(--if-border-default) !important;
+}
+
+html.mode-light .border-neutral-700 {
+  border-color: var(--if-border-strong) !important;
+}
+
+html.mode-light .border-neutral-900 {
+  border-color: var(--if-border-subtle) !important;
+}
+
+html.mode-light .border-dashed {
+  border-color: var(--if-border-default) !important;
+}
+
+html.mode-light .disabled\:border-neutral-800:disabled {
+  border-color: var(--if-border-subtle) !important;
+}
+
+html.mode-light .disabled\:text-neutral-600:disabled {
+  color: var(--if-text-placeholder) !important;
+}
+
+/* ---- DIVIDERS -------------------------------------------------------- */
+html.mode-light .divide-neutral-800\/80 > * + * {
+  border-color: var(--if-border-subtle) !important;
+}
+
+/* ---- CARD ELEVATION -------------------------------------------------- */
+html.mode-light .zs-panel {
+  box-shadow: var(--if-shadow-card) !important;
+}
+
+/* ---- FORM CONTROLS --------------------------------------------------- */
+html.mode-light input[type="text"],
+html.mode-light input[type="time"],
+html.mode-light input[type="date"] {
+  background-color: var(--if-bg-input) !important;
+  color: var(--if-text-primary) !important;
+  border-color: var(--if-border-default) !important;
+}
+
+html.mode-light select {
+  background-color: var(--if-bg-input) !important;
+  color: var(--if-text-primary) !important;
+  border-color: var(--if-border-default) !important;
+}
+
+html.mode-light select option {
+  background-color: var(--if-bg-elevated);
+  color: var(--if-text-primary);
+}
+
+html.mode-light input[type="color"] {
+  color-scheme: light;
+  background-color: var(--if-bg-input) !important;
+  border-color: var(--if-border-default) !important;
+}
+
+/* ---- TIMER DIAL ------------------------------------------------------ */
+/* Outer ring / gradient shell */
+html.mode-light .bg-gradient-to-br.from-neutral-900.via-neutral-950.to-black {
+  background-image: linear-gradient(to bottom right, #d0d3da, #c4c8d0) !important;
+}
+
+/* Inner "face" of the dial */
+html.mode-light .bg-neutral-950\/95.shadow-inner {
+  background-color: var(--if-bg-app) !important;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.10) !important;
+}
+
+/* Outer dial ring shadow */
+html.mode-light .shadow-\[0_0_0_1px_rgba\(15\2c 23\2c 42\2c 0\.9\)\] {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.10) !important;
+}
+
+/* ---- CHART CONTAINERS ------------------------------------------------ */
+/* The inner chart border+bg box used in WeeklyHoursChart */
+html.mode-light .rounded-md.border.border-neutral-800\/80.bg-neutral-950\/60,
+html.mode-light .rounded-md.border.bg-neutral-950\/60 {
+  background-color: var(--if-bg-elevated) !important;
+  border-color: var(--if-border-default) !important;
+}
+
+/* Recharts internals */
+html.mode-light .recharts-rectangle {
+  opacity: 0.9;
+}
+
+/* ---- SHADOW / INSET UTILITIES ---------------------------------------- */
+html.mode-light .shadow-inner {
+  box-shadow: var(--if-shadow-inset) !important;
+}
+
+html.mode-light .shadow-sm {
+  box-shadow: var(--if-shadow-card) !important;
+}
+
+/* Shadow on floating panels/modals */
+html.mode-light .shadow-2xl {
+  box-shadow: var(--if-shadow-modal) !important;
+}
+
+html.mode-light .shadow-lg {
+  box-shadow: var(--if-shadow-elevated) !important;
+}
+
+/* ---- SEGMENTED PILL CONTROLS ----------------------------------------- */
+/* The pill wrapper */
+html.mode-light .rounded-full.border.border-neutral-700.bg-neutral-950\/60,
+html.mode-light .rounded-full.border.border-neutral-700.bg-neutral-950\/40 {
+  background-color: var(--if-bg-input) !important;
+  border-color: var(--if-border-default) !important;
+}
+
+/* Unselected pill text */
+html.mode-light .rounded-full .text-neutral-400 {
+  color: var(--if-text-muted) !important;
+}
+
+/* ---- TABLE / LOG ROWS ------------------------------------------------ */
+html.mode-light table tr:hover td {
+  background-color: var(--if-bg-hover);
+}
+
+html.mode-light .border-separate.border-spacing-y-1 tr td {
+  border-color: transparent;
+}
+
+/* ---- MODAL / OVERLAY ------------------------------------------------- */
+html.mode-light .bg-black\/70 {
+  background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Modal card */
+html.mode-light .bg-neutral-950\/95.rounded-xl {
+  background-color: var(--if-bg-elevated) !important;
+  box-shadow: var(--if-shadow-modal) !important;
+}
+
+/* ---- START BUTTON (white in dark mode, keep contrast) ---------------- */
+html.mode-light .bg-neutral-50\/95 {
+  background-color: var(--if-bg-elevated) !important;
+  border-color: var(--if-border-strong) !important;
+  color: var(--if-text-primary) !important;
+}
+
+html.mode-light .hover\:bg-white:hover {
+  background-color: #ffffff !important;
+}
+
+/* ---- COMPLETION POPUP ------------------------------------------------ */
+html.mode-light .bg-neutral-950\/95.rounded-lg {
+  background-color: var(--if-bg-elevated) !important;
+  border-color: var(--if-border-default) !important;
+  box-shadow: var(--if-shadow-elevated) !important;
+}
+
+/* ---- EMPTY STATE DASHED BOXES ---------------------------------------- */
+html.mode-light .border-dashed.border-neutral-800\/80,
+html.mode-light .border-dashed.border-neutral-800 {
+  border-color: var(--if-border-default) !important;
+  background-color: rgba(230, 232, 236, 0.40) !important;
+}
+
+/* ---- SETTINGS PAGE --------------------------------------------------- */
+html.mode-light .border-neutral-800.pt-3 {
+  border-color: var(--if-border-default) !important;
+}
+
+/* ---- SCROLLBAR (LIGHT MODE) ------------------------------------------ */
+html.mode-light {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.18) var(--if-bg-app);
+}
+
+html.mode-light *::-webkit-scrollbar-track {
+  background: var(--if-bg-app);
+}
+
+html.mode-light *::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border: 2px solid var(--if-bg-app);
+  border-radius: 999px;
+}
+
+html.mode-light *::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Accent scrollbars in light mode */
+html.mode-light.theme-classic {
+  scrollbar-color: rgba(217, 119, 6, 0.55) var(--if-bg-app);
+}
+
+html.mode-light.theme-wife {
+  scrollbar-color: rgba(219, 39, 119, 0.55) var(--if-bg-app);
+}
+
+html.mode-light.theme-classic *::-webkit-scrollbar-thumb {
+  background: rgba(217, 119, 6, 0.40);
+  border-color: var(--if-bg-app);
+}
+
+html.mode-light.theme-classic *::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 119, 6, 0.60);
+}
+
+html.mode-light.theme-wife *::-webkit-scrollbar-thumb {
+  background: rgba(219, 39, 119, 0.40);
+  border-color: var(--if-bg-app);
+}
+
+html.mode-light.theme-wife *::-webkit-scrollbar-thumb:hover {
+  background: rgba(219, 39, 119, 0.60);
 }

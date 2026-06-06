@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAppState } from "../../state/AppStateProvider";
+import { useTheme } from "../../state/ThemeProvider";
 
 export function CategoriesPanel() {
   const {
@@ -8,10 +9,14 @@ export function CategoriesPanel() {
     updateCategory,
     updateCategoryColor,
     deleteCategory,
+    reorderCategories,
   } = useAppState();
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const { theme } = useTheme();
+  const isWife = theme === "wife";
 
   const canAdd = newName.trim().length > 0;
 
@@ -42,13 +47,17 @@ export function CategoriesPanel() {
 
       <div className="space-y-5">
         <div className="flex gap-2">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Add new category"
-            className="flex-1 rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-amber-500/70"
-          />
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Add new category"
+              className={`flex-1 rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
+                isWife
+                  ? "focus:border-pink-500/70"
+                  : "focus:border-amber-500/70"
+              }`}
+            />
           <button
             type="button"
             disabled={!canAdd}
@@ -57,7 +66,11 @@ export function CategoriesPanel() {
               addCategory(newName);
               setNewName("");
             }}
-            className="inline-flex items-center justify-center rounded-md border border-amber-500/60 bg-amber-600/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-950 shadow-sm transition-colors hover:bg-amber-500 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600"
+            className={`inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${
+              isWife
+                ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
+                : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500"
+            }`}
           >
             Add
           </button>
@@ -69,12 +82,36 @@ export function CategoriesPanel() {
               No categories defined.
             </div>
           ) : (
-            <ul className="space-y-1 text-xs text-neutral-200">
+            <ul
+              className="space-y-1 text-xs text-neutral-200"
+              onMouseUp={() => setDraggingId(null)}
+            >
               {categories.map((cat) => (
                 <li
                   key={cat.id}
-                  className="flex items-center gap-2 rounded-md border border-neutral-800/70 bg-neutral-950/40 px-2 py-1.5"
+                  onMouseEnter={() => {
+                    if (!draggingId || draggingId === cat.id) return;
+                    reorderCategories(draggingId, cat.id);
+                  }}
+                  className={`flex items-center gap-2 rounded-md border border-neutral-800/70 bg-neutral-950/40 px-2 py-1.5 transition-all duration-150 ${
+                    draggingId === cat.id
+                      ? "opacity-80 translate-x-1 translate-y-0.5"
+                      : "opacity-100 translate-x-0 translate-y-0"
+                  }`}
                 >
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      if (e.button !== 0) return;
+                      setDraggingId(cat.id);
+                    }}
+                    className="flex h-6 w-4 items-center justify-center cursor-grab text-neutral-600 hover:text-neutral-300"
+                    aria-label={`Reorder ${cat.name}`}
+                  >
+                    <span className="inline-block text-[14px] leading-none">
+                      ☰
+                    </span>
+                  </button>
                   <div className="flex items-center gap-1">
                     <span
                       className="inline-block h-3.5 w-3.5 rounded-full border border-neutral-700"
@@ -85,7 +122,7 @@ export function CategoriesPanel() {
                     <input
                       type="color"
                       aria-label={`Color for ${cat.name}`}
-                      value={cat.color ?? "#fbbf24"}
+                      value={cat.color ?? (isWife ? "#ec4899" : "#fbbf24")}
                       onChange={(e) => updateCategoryColor(cat.id, e.target.value)}
                       className="h-5 w-5 cursor-pointer rounded border border-neutral-700 bg-neutral-900 p-0 [color-scheme:dark]"
                     />
@@ -105,7 +142,11 @@ export function CategoriesPanel() {
                         }
                       }}
                       autoFocus
-                      className="flex-1 rounded-sm border border-neutral-700 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 outline-none focus:border-amber-500/70"
+                      className={`flex-1 rounded-sm border border-neutral-700 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 outline-none ${
+                        isWife
+                          ? "focus:border-pink-500/70"
+                          : "focus:border-amber-500/70"
+                      }`}
                     />
                   ) : (
                     <button

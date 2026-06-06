@@ -16,7 +16,7 @@ type AppShellProps = {
 
 export function AppShell({ children, activeView, onChangeView }: AppShellProps) {
   return (
-    <div className="flex h-screen w-screen bg-neutral-950 text-neutral-100">
+    <div className="if-app-shell flex h-screen w-screen bg-neutral-950 text-neutral-100">
       <Sidebar
         activeKey={activeView}
         onChange={(key) => onChangeView(key as AppViewKey)}

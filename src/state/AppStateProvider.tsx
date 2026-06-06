@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -15,6 +16,7 @@ type AppStateContextValue = {
   updateCategory: (id: string, name: string) => void;
   updateCategoryColor: (id: string, color: string) => void;
   deleteCategory: (id: string) => void;
+  reorderCategories: (sourceId: string, targetId: string) => void;
   deleteLog: (id: string) => void;
   addLogFromForm: (input: {
     title: string;
@@ -49,7 +51,7 @@ const DEFAULT_CATEGORY_NAMES = [
 ];
 
 const DEFAULT_CATEGORY_COLORS = [
-  "#fbbf24", // amber
+  "#fbbf24", // amber (classic default accent)
   "#f97316", // orange
   "#22d3ee", // cyan
   "#a855f7", // purple
@@ -67,15 +69,62 @@ function createInitialCategories(): Category[] {
   }));
 }
 
+const STORAGE_KEYS = {
+  categories: "ironfocus.categories.v1",
+  logs: "ironfocus.logs.v1",
+} as const;
+
 type AppStateProviderProps = {
   children: ReactNode;
 };
 
 export function AppStateProvider({ children }: AppStateProviderProps) {
-  const [categories, setCategories] = useState<Category[]>(
-    () => createInitialCategories(),
-  );
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [categories, setCategories] = useState<Category[]>(() => {
+    if (typeof window === "undefined") return createInitialCategories();
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEYS.categories);
+      if (!raw) return createInitialCategories();
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return createInitialCategories();
+      return parsed as Category[];
+    } catch {
+      return createInitialCategories();
+    }
+  });
+
+  const [logs, setLogs] = useState<LogEntry[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEYS.logs);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      return parsed as LogEntry[];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEYS.categories,
+        JSON.stringify(categories),
+      );
+    } catch {
+      // ignore storage errors
+    }
+  }, [categories]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(STORAGE_KEYS.logs, JSON.stringify(logs));
+    } catch {
+      // ignore storage errors
+    }
+  }, [logs]);
 
   function validateAndBuildLog(input: {
     id: string;
@@ -89,10 +138,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   }): { ok: true; log: LogEntry } | { ok: false; error: string } {
     const { id, title, categoryId, tagsRaw, startTime, endTime, notes } = input;
 
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) {
-      return { ok: false as const, error: "Title is required." };
-    }
+    const trimmedTitle = title.trim() || "Session";
     if (!categoryId) {
       return { ok: false as const, error: "Category is required." };
     }
@@ -179,6 +225,18 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       deleteCategory(id) {
         setCategories((prev) => prev.filter((c) => c.id !== id));
         setLogs((prev) => prev.filter((log) => log.categoryId !== id));
+      },
+      reorderCategories(sourceId, targetId) {
+        if (sourceId === targetId) return;
+        setCategories((prev) => {
+          const sourceIndex = prev.findIndex((c) => c.id === sourceId);
+          const targetIndex = prev.findIndex((c) => c.id === targetId);
+          if (sourceIndex === -1 || targetIndex === -1) return prev;
+          const next = [...prev];
+          const [moved] = next.splice(sourceIndex, 1);
+          next.splice(targetIndex, 0, moved);
+          return next;
+        });
       },
       deleteLog(id) {
         setLogs((prev) => prev.filter((log) => log.id !== id));

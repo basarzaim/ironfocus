@@ -2,12 +2,15 @@ import { useState } from "react";
 import { useAppState } from "../state/AppStateProvider";
 import { formatMinutesHuman } from "../lib/time";
 import { QuickLogPanel } from "../components/dashboard/QuickLogPanel";
+import { useTheme } from "../state/ThemeProvider";
 
 type SortKey = "date_desc" | "date_asc" | "duration_desc" | "duration_asc";
 type RangeKey = "all" | "today" | "week" | "month";
 
 export function LogsPage() {
   const { logs, categories, deleteLog, updateLogFromForm } = useAppState();
+  const { theme } = useTheme();
+  const isWife = theme === "wife";
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("date_desc");
@@ -24,6 +27,7 @@ export function LogsPage() {
   const [editEndTime, setEditEndTime] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
+  const [deleteCandidateId, setDeleteCandidateId] = useState<string | null>(null);
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -238,7 +242,7 @@ export function LogsPage() {
                       <button
                         type="button"
                         onClick={() => setRangeOffset((v) => v - 1)}
-                        className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 bg-neutral-950/80 text-sm text-neutral-200 hover:border-amber-500 hover:text-amber-300"
+                        className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 bg-neutral-950/80 text-sm text-neutral-200 hover:border-pink-500 hover:text-pink-300"
                         aria-label="Previous period"
                       >
                         ‹
@@ -250,7 +254,7 @@ export function LogsPage() {
                           setRangeOffset((v) => Math.min(0, v + 1));
                         }}
                         disabled={!canGoForward}
-                        className={`flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 bg-neutral-950/80 text-sm text-neutral-200 hover:border-amber-500 hover:text-amber-300 ${
+                        className={`flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 bg-neutral-950/80 text-sm text-neutral-200 hover:border-pink-500 hover:text-pink-300 ${
                           !canGoForward
                             ? "cursor-not-allowed opacity-40 hover:border-neutral-700 hover:text-neutral-200"
                             : ""
@@ -272,7 +276,7 @@ export function LogsPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search title or notes…"
-              className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-amber-500/70"
+              className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-pink-500/70"
             />
           </div>
 
@@ -284,7 +288,7 @@ export function LogsPage() {
               <select
                 value={selectedCategoryId}
                 onChange={(e) => setSelectedCategoryId(e.target.value)}
-                className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-2 py-2 text-xs text-neutral-100 outline-none focus:border-amber-500/70"
+                className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-2 py-2 text-xs text-neutral-100 outline-none focus:border-pink-500/70"
               >
                 <option value="all">All</option>
                 {categories.map((cat) => (
@@ -302,7 +306,7 @@ export function LogsPage() {
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-2 py-2 text-xs text-neutral-100 outline-none focus:border-amber-500/70"
+                className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-2 py-2 text-xs text-neutral-100 outline-none focus:border-pink-500/70"
               >
                 <option value="date_desc">Date (newest)</option>
                 <option value="date_asc">Date (oldest)</option>
@@ -319,7 +323,7 @@ export function LogsPage() {
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-2 py-[7px] text-xs text-neutral-100 outline-none focus:border-amber-500/70"
+                className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-2 py-[7px] text-xs text-neutral-100 outline-none focus:border-pink-500/70"
               />
             </div>
 
@@ -331,7 +335,7 @@ export function LogsPage() {
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-2 py-[7px] text-xs text-neutral-100 outline-none focus:border-amber-500/70"
+                className="w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-2 py-[7px] text-xs text-neutral-100 outline-none focus:border-pink-500/70"
               />
             </div>
           </div>
@@ -360,7 +364,11 @@ export function LogsPage() {
               <button
                 type="button"
                 onClick={saveEdit}
-                className="inline-flex items-center justify-center rounded-md border border-amber-500/60 bg-amber-600/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-950 shadow-sm transition-colors hover:bg-amber-500"
+                className={`inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-50 shadow-sm transition-colors ${
+                  isWife
+                    ? "border-pink-500/60 bg-pink-600/80 hover:bg-pink-500"
+                    : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500"
+                }`}
               >
                 Save
               </button>
@@ -376,7 +384,7 @@ export function LogsPage() {
                 type="text"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-amber-500/70"
+                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-pink-500/70"
                 placeholder="Session title"
               />
             </div>
@@ -388,7 +396,7 @@ export function LogsPage() {
               <select
                 value={editCategoryId}
                 onChange={(e) => setEditCategoryId(e.target.value)}
-                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none focus:border-amber-500/70"
+                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none focus:border-pink-500/70"
               >
                 <option value="">Select</option>
                 {categories.map((cat) => (
@@ -409,7 +417,7 @@ export function LogsPage() {
                 type="time"
                 value={editStartTime}
                 onChange={(e) => setEditStartTime(e.target.value)}
-                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none focus:border-amber-500/70"
+                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none focus:border-pink-500/70"
               />
             </div>
             <div className="space-y-2">
@@ -420,7 +428,7 @@ export function LogsPage() {
                 type="time"
                 value={editEndTime}
                 onChange={(e) => setEditEndTime(e.target.value)}
-                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none focus:border-amber-500/70"
+                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none focus:border-pink-500/70"
               />
             </div>
             <div className="space-y-2 md:col-span-2">
@@ -431,7 +439,7 @@ export function LogsPage() {
                 type="text"
                 value={editTagsRaw}
                 onChange={(e) => setEditTagsRaw(e.target.value)}
-                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-amber-500/70"
+                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-pink-500/70"
                 placeholder="Comma separated"
               />
             </div>
@@ -445,7 +453,7 @@ export function LogsPage() {
               type="text"
               value={editNotes}
               onChange={(e) => setEditNotes(e.target.value)}
-              className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-amber-500/70"
+              className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-pink-500/70"
               placeholder="Optional"
             />
             {editError ? (
@@ -570,16 +578,7 @@ export function LogsPage() {
                           <button
                             type="button"
                             className="text-[11px] text-red-400 hover:text-red-300"
-                            onClick={() => {
-                              // eslint-disable-next-line no-alert
-                              if (
-                                window.confirm(
-                                  "Delete this log entry? This cannot be undone.",
-                                )
-                              ) {
-                                deleteLog(log.id);
-                              }
-                            }}
+                            onClick={() => setDeleteCandidateId(log.id)}
                           >
                             Delete
                           </button>
@@ -593,6 +592,39 @@ export function LogsPage() {
           )}
         </div>
       </section>
+      {deleteCandidateId && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-950/95 p-5 shadow-2xl">
+            <h2 className="text-sm font-semibold tracking-wide text-neutral-100">
+              Delete log entry?
+            </h2>
+            <p className="mt-2 text-xs text-neutral-400">
+              This action is permanent. The log will be removed from your history and analytics.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-300 hover:bg-neutral-800"
+                onClick={() => setDeleteCandidateId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-md border border-red-500/70 bg-red-600/90 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-50 shadow-sm hover:bg-red-500"
+                onClick={() => {
+                  if (deleteCandidateId) {
+                    deleteLog(deleteCandidateId);
+                    setDeleteCandidateId(null);
+                  }
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

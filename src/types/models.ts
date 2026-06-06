@@ -26,6 +26,7 @@ export interface TimerSession {
   id: string;
   mode: TimerMode;
   presetMinutes?: number;
+  categoryId?: CategoryId;
   startedAt: string; // ISO string
   stoppedAt?: string; // ISO string
   durationSeconds: number;

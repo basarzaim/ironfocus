@@ -1,13 +1,16 @@
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip } from "recharts";
 import type { LogEntry } from "../../../types/models";
 import { useAppState } from "../../../state/AppStateProvider";
+import { useTheme } from "../../../state/ThemeProvider";
 import { getBucketsForRange } from "../../../lib/analytics";
+import { formatMinutesHuman } from "../../../lib/time";
 
 type WeeklyHoursChartProps = {
   days: number;
   logsOverride?: LogEntry[];
   endDate?: Date;
   monthMode?: boolean;
+  weekMode?: boolean;
 };
 
 export function WeeklyHoursChart({
@@ -15,10 +18,26 @@ export function WeeklyHoursChart({
   logsOverride,
   endDate,
   monthMode,
+  weekMode,
 }: WeeklyHoursChartProps) {
   const { logs: contextLogs } = useAppState();
   const logs = logsOverride ?? contextLogs;
-  const data = getBucketsForRange(logs, days, endDate, monthMode === true);
+  const data = getBucketsForRange(
+    logs,
+    days,
+    endDate,
+    monthMode === true,
+    weekMode === true,
+  );
+  const { theme, colorMode } = useTheme();
+  const isWife = theme === "wife";
+  const isLight = colorMode === "light";
+
+  const tickColor = isLight ? "#4a4a56" : "#9ca3af";
+  const tooltipBg = isLight ? "#f0f1f4" : "#020617";
+  const tooltipBorder = isLight ? "rgba(0,0,0,0.14)" : "#4b5563";
+  const tooltipLabel = isLight ? "#17171a" : "#e5e7eb";
+  const tooltipItem = isWife ? "#db2777" : isLight ? "#b45309" : "#fbbf24";
 
   return (
     <div className="relative h-full rounded-md border border-neutral-800/80 bg-neutral-950/60 px-2 py-1">
@@ -31,7 +50,7 @@ export function WeeklyHoursChart({
             interval={0}
             tickMargin={6}
             tick={{
-              fill: "#9ca3af",
+              fill: tickColor,
               fontSize: monthMode ? 9 : 11,
             }}
             tickFormatter={(value: string | number) => {
@@ -44,20 +63,27 @@ export function WeeklyHoursChart({
             }}
           />
           <Tooltip
-            cursor={{ fill: "rgba(250, 204, 21, 0.08)" }}
+            cursor={{
+              fill: isWife
+                ? "rgba(244, 114, 182, 0.08)"
+                : "rgba(250, 204, 21, 0.08)",
+            }}
             contentStyle={{
-              backgroundColor: "#020617",
+              backgroundColor: tooltipBg,
               borderRadius: 8,
-              border: "1px solid #4b5563",
+              border: `1px solid ${tooltipBorder}`,
               padding: "4px 8px",
             }}
-            labelStyle={{ color: "#e5e7eb", fontSize: 11 }}
-            itemStyle={{ color: "#fbbf24", fontSize: 11 }}
-            formatter={(value) => [`${Number(value ?? 0)} min`, "Minutes"]}
+            labelStyle={{ color: tooltipLabel, fontSize: 11 }}
+            itemStyle={{
+              color: tooltipItem,
+              fontSize: 11,
+            }}
+            formatter={(value) => [formatMinutesHuman(Number(value ?? 0)), "Time"]}
           />
           <Bar
             dataKey="minutes"
-            fill="#fbbf24"
+            fill={isWife ? "#db2777" : isLight ? "#d97706" : "#fbbf24"}
             radius={[4, 4, 0, 0]}
             maxBarSize={28}
           />

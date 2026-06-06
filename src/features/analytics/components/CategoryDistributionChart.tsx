@@ -11,10 +11,12 @@ import {
   YAxis,
 } from "recharts";
 import { useAppState } from "../../../state/AppStateProvider";
+import { useTheme } from "../../../state/ThemeProvider";
 import type { LogEntry } from "../../../types/models";
 import { getCategoryDistribution } from "../../../lib/analytics";
+import { formatMinutesHuman } from "../../../lib/time";
 
-const FALLBACK_COLORS = ["#fbbf24", "#f97316", "#22d3ee", "#a855f7", "#4ade80"];
+const FALLBACK_COLORS = ["#ec4899", "#f97316", "#22d3ee", "#a855f7", "#4ade80"];
 
 type CategoryDistributionChartProps = {
   logsOverride?: LogEntry[];
@@ -28,6 +30,19 @@ export function CategoryDistributionChart({
     "vertical",
   );
   const { logs: contextLogs, categories } = useAppState();
+  const { theme, colorMode } = useTheme();
+  const isWife = theme === "wife";
+  const isLight = colorMode === "light";
+
+  const tickColor = isLight ? "#4a4a56" : "#9ca3af";
+  const tooltipBg = isLight ? "#f0f1f4" : "#020617";
+  const tooltipBorder = isLight ? "rgba(0,0,0,0.14)" : "#4b5563";
+  const tooltipLabel = isLight ? "#17171a" : "#e5e7eb";
+  const tooltipItem = isWife ? "#db2777" : isLight ? "#b45309" : "#fbbf24";
+  const pieStroke = isLight ? "#e8eaee" : "#020617";
+  const barToggleHover = isWife
+    ? "hover:border-pink-500 hover:text-pink-300"
+    : "hover:border-amber-500 hover:text-amber-300";
   const logs = logsOverride ?? contextLogs;
   const data = getCategoryDistribution(logs, categories);
 
@@ -87,7 +102,7 @@ export function CategoryDistributionChart({
                     tickLine={false}
                     axisLine={false}
                     tick={{
-                      fill: "#9ca3af",
+                      fill: tickColor,
                       fontSize: 11,
                       textAnchor: "start",
                       dx: -8,
@@ -99,7 +114,7 @@ export function CategoryDistributionChart({
                     width={90}
                     tickLine={false}
                     axisLine={false}
-                    tick={{ fill: "#9ca3af", fontSize: 11 }}
+                    tick={{ fill: tickColor, fontSize: 11 }}
                   />
                 </>
               ) : (
@@ -112,7 +127,7 @@ export function CategoryDistributionChart({
                     interval={0}
                     tickMargin={4}
                     tick={{
-                      fill: "#9ca3af",
+                      fill: tickColor,
                       fontSize: 10,
                     }}
                   />
@@ -121,7 +136,7 @@ export function CategoryDistributionChart({
                     tickLine={false}
                     axisLine={false}
                     tick={{
-                      fill: "#9ca3af",
+                      fill: tickColor,
                       fontSize: 11,
                       textAnchor: "start",
                       dx: -8,
@@ -130,16 +145,23 @@ export function CategoryDistributionChart({
                 </>
               )}
               <Tooltip
-                cursor={{ fill: "rgba(250, 204, 21, 0.08)" }}
+                cursor={{
+                  fill: isWife
+                    ? "rgba(219, 39, 119, 0.08)"
+                    : "rgba(217, 119, 6, 0.08)",
+                }}
                 contentStyle={{
-                  backgroundColor: "#020617",
+                  backgroundColor: tooltipBg,
                   borderRadius: 8,
-                  border: "1px solid #4b5563",
+                  border: `1px solid ${tooltipBorder}`,
                   padding: "4px 8px",
                 }}
-                labelStyle={{ color: "#e5e7eb", fontSize: 11 }}
-                itemStyle={{ color: "#fbbf24", fontSize: 11 }}
-                formatter={(value) => [`${Number(value ?? 0)} min`, "Minutes"]}
+                labelStyle={{ color: tooltipLabel, fontSize: 11 }}
+                itemStyle={{
+                  color: tooltipItem,
+                  fontSize: 11,
+                }}
+                formatter={(value) => [formatMinutesHuman(Number(value ?? 0)), "Time"]}
               />
               <Bar dataKey="minutes" radius={[4, 4, 4, 4]}>
                 {withColors.map((entry) => (
@@ -158,20 +180,20 @@ export function CategoryDistributionChart({
                 paddingAngle={2}
               >
                 {withColors.map((entry) => (
-                  <Cell key={entry.categoryId} fill={entry.color} stroke="#020617" />
+                  <Cell key={entry.categoryId} fill={entry.color} stroke={pieStroke} />
                 ))}
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#020617",
+                  backgroundColor: tooltipBg,
                   borderRadius: 8,
-                  border: "1px solid #4b5563",
+                  border: `1px solid ${tooltipBorder}`,
                   padding: "4px 8px",
                 }}
-                labelStyle={{ color: "#e5e7eb", fontSize: 11 }}
-                itemStyle={{ color: "#e5e7eb", fontSize: 11 }}
+                labelStyle={{ color: tooltipLabel, fontSize: 11 }}
+                itemStyle={{ color: tooltipLabel, fontSize: 11 }}
                 formatter={(value, _name, item) => [
-                  `${Number(value ?? 0)} min`,
+                  formatMinutesHuman(Number(value ?? 0)),
                   (item?.payload as { name: string } | undefined)?.name ?? "Category",
                 ]}
               />
@@ -199,7 +221,7 @@ export function CategoryDistributionChart({
                 prev === "vertical" ? "horizontal" : "vertical",
               )
             }
-            className="absolute left-0 top-0 -translate-y-6  inline-flex h-5 w-5 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/90 text-[11px] text-neutral-300 shadow-sm hover:border-amber-500 hover:text-amber-300"
+            className={`absolute left-0 top-0 -translate-y-6 inline-flex h-5 w-5 items-center justify-center rounded-full border border-neutral-700 bg-neutral-900/90 text-[11px] text-neutral-300 shadow-sm ${barToggleHover}`}
             title="Toggle bar orientation"
           >
             <span className="leading-none">⇆</span>

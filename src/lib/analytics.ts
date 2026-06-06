@@ -12,6 +12,23 @@ function toLocalDateKey(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function startOfWeekMonday(ref: Date): Date {
+  const d = new Date(ref);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay(); // Sun=0..Sat=6
+  const diff = (day + 6) % 7; // Mon(1)->0 ... Sun(0)->6
+  d.setDate(d.getDate() - diff);
+  return d;
+}
+
+function endOfWeekSunday(ref: Date): Date {
+  const start = startOfWeekMonday(ref);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return end;
+}
+
 export function getTodayTotalMinutes(logs: LogEntry[]): number {
   const today = new Date();
   return logs
@@ -36,12 +53,21 @@ export function getDeepWorkMinutes(logs: LogEntry[], days?: number): number {
 
 export function getStatsSummary(logs: LogEntry[]) {
   const todayMinutes = getTodayTotalMinutes(logs);
-  const last7Minutes = getRangeTotalMinutes(logs, 7);
-  const deepMinutes = getDeepWorkMinutes(logs, 7);
+  const now = new Date();
+  const weekStart = startOfWeekMonday(now);
+  const weekEnd = endOfWeekSunday(now);
+  const weekLogs = logs.filter((log) => {
+    const d = new Date(log.startTime);
+    return d >= weekStart && d <= weekEnd;
+  });
+  const weekMinutes = weekLogs.reduce((acc, log) => acc + log.durationMinutes, 0);
+  const deepMinutes = weekLogs
+    .filter((log) => log.durationMinutes >= 60)
+    .reduce((acc, log) => acc + log.durationMinutes, 0);
 
   return {
     todayLabel: formatMinutesHuman(todayMinutes),
-    last7Label: formatMinutesHuman(last7Minutes),
+    last7Label: formatMinutesHuman(weekMinutes),
     deepLabel: formatMinutesHuman(deepMinutes),
   };
 }
@@ -51,6 +77,7 @@ export function getBucketsForRange(
   days: number,
   endDate?: Date,
   monthMode = false,
+  weekMode = false,
 ) {
   const ref = endDate ? new Date(endDate) : new Date();
 
@@ -64,6 +91,9 @@ export function getBucketsForRange(
     start.setHours(0, 0, 0, 0);
     end = new Date(year, month + 1, 0);
     end.setHours(23, 59, 59, 999);
+  } else if (weekMode) {
+    start = startOfWeekMonday(ref);
+    end = endOfWeekSunday(ref);
   } else {
     end = new Date(ref);
     end.setHours(23, 59, 59, 999);
@@ -83,7 +113,7 @@ export function getBucketsForRange(
   while (cursor <= end) {
     const label = monthMode
       ? String(cursor.getDate())
-      : days <= 7
+      : weekMode || days <= 7
         ? cursor.toLocaleDateString("en-US", {
             weekday: "short",
           })
@@ -109,7 +139,9 @@ export function getBucketsForRange(
     if (bucket) bucket.minutes += log.durationMinutes;
   });
 
-  if (!monthMode && days === 7) {
+  // For rolling 7-day windows we sort to show Monday first.
+  // For calendar weeks we already generate Monday → Sunday order.
+  if (!monthMode && !weekMode && days === 7) {
     buckets.sort((a, b) => {
       const wa = a.weekday ?? 0;
       const wb = b.weekday ?? 0;

@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useAppState } from "../../state/AppStateProvider";
+import { useTheme } from "../../state/ThemeProvider";
 
 export function QuickLogPanel() {
   const { categories, addLogFromForm } = useAppState();
@@ -10,9 +11,10 @@ export function QuickLogPanel() {
   const [endTime, setEndTime] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const { theme } = useTheme();
+  const isWife = theme === "wife";
 
-  const hasRequiredFields =
-    title.trim().length > 0 && categoryId && startTime && endTime;
+  const hasRequiredFields = categoryId && startTime && endTime;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -62,7 +64,9 @@ export function QuickLogPanel() {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-sm text-neutral-100 outline-none ring-0 transition-colors placeholder:text-neutral-600 focus:border-amber-500/70"
+              className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-sm text-neutral-100 outline-none ring-0 transition-colors placeholder:text-neutral-600 ${
+                isWife ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+              }`}
               placeholder="What did you work on?"
             />
           </div>
@@ -75,11 +79,24 @@ export function QuickLogPanel() {
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none focus:border-amber-500/70"
+                className={`w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-3 py-1.5 text-xs text-neutral-100 outline-none ${
+                  isWife
+                    ? "focus:border-pink-500/70"
+                    : "focus:border-amber-500/70"
+                }`}
               >
-                <option value="">Select</option>
+                <option
+                  value=""
+                  className="bg-neutral-900 text-neutral-200"
+                >
+                  Select
+                </option>
                 {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
+                  <option
+                    key={cat.id}
+                    value={cat.id}
+                    className="bg-neutral-900 text-neutral-100"
+                  >
                     {cat.name}
                   </option>
                 ))}
@@ -93,7 +110,11 @@ export function QuickLogPanel() {
                 type="text"
                 value={tagsRaw}
                 onChange={(e) => setTagsRaw(e.target.value)}
-                className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-amber-500/70"
+                className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
+                  isWife
+                    ? "focus:border-pink-500/70"
+                    : "focus:border-amber-500/70"
+                }`}
                 placeholder="Comma separated"
               />
             </div>
@@ -109,7 +130,11 @@ export function QuickLogPanel() {
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none focus:border-amber-500/70"
+              className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none ${
+                isWife
+                  ? "focus:border-pink-500/70"
+                  : "focus:border-amber-500/70"
+              }`}
             />
           </div>
           <div className="space-y-2">
@@ -120,7 +145,11 @@ export function QuickLogPanel() {
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none focus:border-amber-500/70"
+              className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none ${
+                isWife
+                  ? "focus:border-pink-500/70"
+                  : "focus:border-amber-500/70"
+              }`}
             />
           </div>
           <div className="space-y-2">
@@ -131,14 +160,22 @@ export function QuickLogPanel() {
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-amber-500/70"
+              className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
+                isWife
+                  ? "focus:border-pink-500/70"
+                  : "focus:border-amber-500/70"
+              }`}
               placeholder="Optional"
             />
           </div>
 
           <button
             type="submit"
-            className="mt-2 inline-flex items-center justify-center rounded-md border border-amber-500/60 bg-amber-600/80 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-950 shadow-sm transition-colors hover:bg-amber-500 disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600"
+            className={`mt-2 inline-flex items-center justify-center rounded-md border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${
+              isWife
+                ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
+                : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500"
+            }`}
             disabled={!hasRequiredFields}
           >
             Add Log

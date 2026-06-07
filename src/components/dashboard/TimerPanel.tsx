@@ -10,8 +10,8 @@ const PLANNED_MINUTES_STORAGE_KEY = "ironfocus-timer-planned-minutes";
 
 /** Vintage chronometer assets (public/chronometer/). */
 const CHRONO_ASSET_V = "3";
-const CHRONO_DIAL_SRC = `/chronometer/dial.png?v=${CHRONO_ASSET_V}`;
-const CHRONO_HAND_SRC = `/chronometer/hand.png?v=${CHRONO_ASSET_V}`;
+const CHRONO_DIAL_SRC = `${import.meta.env.BASE_URL}chronometer/dial.png?v=${CHRONO_ASSET_V}`;
+const CHRONO_HAND_SRC = `${import.meta.env.BASE_URL}chronometer/hand.png?v=${CHRONO_ASSET_V}`;
 /** Dial face hub within the dial PNG (%). Crown makes this sit slightly below geometric center. */
 const CHRONO_DIAL_CENTER = { x: 50, y: 56.5 };
 /** Hand hub position within the hand PNG (%), and its rest angle (clockwise from 12). */

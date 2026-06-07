@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useAppState } from "../../state/AppStateProvider";
+import { useTheme } from "../../state/ThemeProvider";
 import type { LogEntry } from "../../types/models";
 import { getDeepWorkMinutes, getTodayTotalMinutes } from "../../lib/analytics";
 import { formatMinutesHuman } from "../../lib/time";
@@ -10,12 +11,52 @@ type StatsCardsProps = {
   periodLabel?: string;
 };
 
+type StatCardProps = {
+  label: string;
+  value: string;
+  hint: string;
+  accent?: "today" | "period" | "deep";
+  isWife: boolean;
+};
+
+function StatCard({ label, value, hint, accent, isWife }: StatCardProps) {
+  const accentBar =
+    accent === "today"
+      ? isWife
+        ? "from-pink-500/80 to-pink-500/0"
+        : "from-amber-500/80 to-amber-500/0"
+      : accent === "deep"
+        ? isWife
+          ? "from-pink-400/60 to-pink-400/0"
+          : "from-amber-400/60 to-amber-400/0"
+        : "from-neutral-500/50 to-neutral-500/0";
+
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-neutral-800/80 bg-neutral-900/80 p-4 ring-1 ring-white/[0.03] transition-colors hover:border-neutral-700/80">
+      <div
+        className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r ${accentBar}`}
+        aria-hidden
+      />
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-neutral-50">
+        {value}
+      </p>
+      <p className="mt-1 text-[11px] text-neutral-500">{hint}</p>
+    </div>
+  );
+}
+
 export function StatsCards({
   todayLogsOverride,
   periodLogsOverride,
   periodLabel,
 }: StatsCardsProps) {
   const { logs: contextLogs } = useAppState();
+  const { theme } = useTheme();
+  const isWife = theme === "wife";
+
   const todayMinutes = useMemo(() => {
     return getTodayTotalMinutes(todayLogsOverride ?? contextLogs);
   }, [todayLogsOverride, contextLogs]);
@@ -33,38 +74,27 @@ export function StatsCards({
 
   return (
     <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      <div className="zs-panel border border-neutral-800 bg-neutral-900/80 px-4 py-3">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-          Today
-        </div>
-        <div className="mt-1 text-xl font-semibold tabular-nums text-neutral-50">
-          {formatMinutesHuman(todayMinutes)}
-        </div>
-        <div className="mt-1 text-xs text-neutral-500">Focused work</div>
-      </div>
-
-      <div className="zs-panel border border-neutral-800 bg-neutral-900/80 px-4 py-3">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-          {periodTitle}
-        </div>
-        <div className="mt-1 text-xl font-semibold tabular-nums text-neutral-50">
-          {formatMinutesHuman(periodMinutes)}
-        </div>
-        <div className="mt-1 text-xs text-neutral-500">All categories</div>
-      </div>
-
-      <div className="zs-panel border border-neutral-800 bg-neutral-900/80 px-4 py-3">
-        <div className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-          Deep work
-        </div>
-        <div className="mt-1 text-xl font-semibold tabular-nums text-neutral-50">
-          {formatMinutesHuman(deepMinutes)}
-        </div>
-        <div className="mt-1 text-xs text-neutral-500">
-          Sessions ≥ 60 minutes
-        </div>
-      </div>
+      <StatCard
+        label="Today"
+        value={formatMinutesHuman(todayMinutes)}
+        hint="Focused work so far"
+        accent="today"
+        isWife={isWife}
+      />
+      <StatCard
+        label={periodTitle}
+        value={formatMinutesHuman(periodMinutes)}
+        hint="All categories in range"
+        accent="period"
+        isWife={isWife}
+      />
+      <StatCard
+        label="Deep work"
+        value={formatMinutesHuman(deepMinutes)}
+        hint="Sessions ≥ 60 minutes"
+        accent="deep"
+        isWife={isWife}
+      />
     </section>
   );
 }
-

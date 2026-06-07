@@ -40,7 +40,7 @@ export function WeeklyHoursChart({
   const tooltipItem = isWife ? "#db2777" : isLight ? "#b45309" : "#fbbf24";
 
   return (
-    <div className="relative h-full rounded-md border border-neutral-800/80 bg-neutral-950/60 px-2 py-1">
+    <div className="relative h-full rounded-xl border border-neutral-800/70 bg-neutral-950/50 px-2 py-2 ring-1 ring-white/[0.02]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
           <XAxis

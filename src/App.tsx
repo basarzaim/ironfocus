@@ -10,7 +10,7 @@ import { FocusTimerProvider } from "./features/timer/TimerProvider";
 import { ThemeProvider } from "./state/ThemeProvider";
 
 function AppInner() {
-  const [view, setView] = useState<AppViewKey>("dashboard");
+  const [view, setView] = useState<AppViewKey>("focus");
 
   let content: ReactElement;
   switch (view) {
@@ -26,7 +26,7 @@ function AppInner() {
     case "settings":
       content = <SettingsPage />;
       break;
-    case "dashboard":
+    case "focus":
     default:
       content = <DashboardPage />;
   }

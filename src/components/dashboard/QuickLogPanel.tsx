@@ -16,6 +16,14 @@ export function QuickLogPanel() {
 
   const hasRequiredFields = categoryId && startTime && endTime;
 
+  const accentFocus = isWife
+    ? "focus:border-pink-500/70"
+    : "focus:border-amber-500/70";
+  const accentBtn = isWife
+    ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
+    : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500";
+  const fieldClass = `w-full rounded-lg border border-neutral-800/80 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none transition-colors placeholder:text-neutral-600 ${accentFocus}`;
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const result = addLogFromForm({
@@ -40,55 +48,53 @@ export function QuickLogPanel() {
   }
 
   return (
-    <section className="zs-panel mb-4 flex flex-col gap-4 border border-neutral-800 bg-neutral-900/80 p-4">
-      <header className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-wide text-neutral-200">
-          Quick Log
-        </h2>
-        <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-          Manual Entry
+    <section className="zs-panel overflow-hidden rounded-2xl border border-neutral-800/80 bg-neutral-900/80 p-4 ring-1 ring-white/[0.03] md:p-5">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
+            Manual entry
+          </p>
+          <h2 className="mt-0.5 text-sm font-semibold tracking-wide text-neutral-100">
+            Quick Log
+          </h2>
+        </div>
+        <span
+          className={`inline-flex items-center rounded-full border border-neutral-800/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+            isWife
+              ? "bg-pink-500/10 text-pink-300/90"
+              : "bg-amber-500/10 text-amber-300/90"
+          }`}
+        >
+          Add session
         </span>
       </header>
 
-      <form
-        className="space-y-3"
-        onSubmit={handleSubmit}
-        noValidate
-      >
+      <form className="space-y-4" onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)]">
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-neutral-400">
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
               Title
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-sm text-neutral-100 outline-none ring-0 transition-colors placeholder:text-neutral-600 ${
-                isWife ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
-              }`}
+              className={`${fieldClass} py-2.5 text-sm`}
               placeholder="What did you work on?"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-neutral-400">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
                 Category
               </label>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className={`w-full rounded-md border border-neutral-800 bg-neutral-950/80 px-3 py-1.5 text-xs text-neutral-100 outline-none ${
-                  isWife
-                    ? "focus:border-pink-500/70"
-                    : "focus:border-amber-500/70"
-                }`}
+                className={fieldClass}
               >
-                <option
-                  value=""
-                  className="bg-neutral-900 text-neutral-200"
-                >
+                <option value="" className="bg-neutral-900 text-neutral-200">
                   Select
                 </option>
                 {categories.map((cat) => (
@@ -102,19 +108,15 @@ export function QuickLogPanel() {
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-neutral-400">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
                 Tags
               </label>
               <input
                 type="text"
                 value={tagsRaw}
                 onChange={(e) => setTagsRaw(e.target.value)}
-                className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                  isWife
-                    ? "focus:border-pink-500/70"
-                    : "focus:border-amber-500/70"
-                }`}
+                className={fieldClass}
                 placeholder="Comma separated"
               />
             </div>
@@ -122,60 +124,44 @@ export function QuickLogPanel() {
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[repeat(3,minmax(0,1fr))_auto] md:items-end">
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-neutral-400">
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
               Start
             </label>
             <input
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none ${
-                isWife
-                  ? "focus:border-pink-500/70"
-                  : "focus:border-amber-500/70"
-              }`}
+              className={fieldClass}
             />
           </div>
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-neutral-400">
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
               End
             </label>
             <input
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none ${
-                isWife
-                  ? "focus:border-pink-500/70"
-                  : "focus:border-amber-500/70"
-              }`}
+              className={fieldClass}
             />
           </div>
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-neutral-400">
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
               Notes
             </label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                isWife
-                  ? "focus:border-pink-500/70"
-                  : "focus:border-amber-500/70"
-              }`}
+              className={fieldClass}
               placeholder="Optional"
             />
           </div>
 
           <button
             type="submit"
-            className={`mt-2 inline-flex items-center justify-center rounded-md border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${
-              isWife
-                ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
-                : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500"
-            }`}
+            className={`mt-2 inline-flex items-center justify-center rounded-full border px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${accentBtn}`}
             disabled={!hasRequiredFields}
           >
             Add Log
@@ -191,4 +177,3 @@ export function QuickLogPanel() {
     </section>
   );
 }
-

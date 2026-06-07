@@ -1,12 +1,19 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 
 export type AppViewKey =
-  | "dashboard"
+  | "focus"
   | "logs"
   | "categories"
   | "analytics"
   | "settings";
+
+const SIDEBAR_COLLAPSED_KEY = "ironfocus.sidebarCollapsed";
+
+function getInitialSidebarCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+}
 
 type AppShellProps = {
   children: ReactNode;
@@ -15,13 +22,27 @@ type AppShellProps = {
 };
 
 export function AppShell({ children, activeView, onChangeView }: AppShellProps) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    getInitialSidebarCollapsed,
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      SIDEBAR_COLLAPSED_KEY,
+      sidebarCollapsed ? "1" : "0",
+    );
+  }, [sidebarCollapsed]);
+
   return (
     <div className="if-app-shell flex h-screen w-screen bg-neutral-950 text-neutral-100">
       <Sidebar
         activeKey={activeView}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
         onChange={(key) => onChangeView(key as AppViewKey)}
       />
-      <main className="flex-1 overflow-y-auto overflow-x-hidden px-8 py-6">
+      <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-6 md:px-8">
         <div className="mx-auto flex min-h-full max-w-6xl flex-col pb-10">
           {children}
         </div>
@@ -29,4 +50,3 @@ export function AppShell({ children, activeView, onChangeView }: AppShellProps) 
     </div>
   );
 }
-

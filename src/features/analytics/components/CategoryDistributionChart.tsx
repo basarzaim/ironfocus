@@ -54,31 +54,37 @@ export function CategoryDistributionChart({
         : FALLBACK_COLORS[index % FALLBACK_COLORS.length],
   }));
 
+  const segmentActive = isWife
+    ? "bg-pink-500/15 text-pink-300 ring-1 ring-pink-500/30"
+    : "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30";
+
   return (
-    <div className="flex h-full flex-col rounded-md border border-neutral-800/80 bg-neutral-950/60 px-2 py-1">
-      <div className="mb-1 flex justify-end gap-1 pr-1 pt-1 text-[10px] text-neutral-500">
-        <button
-          type="button"
-          onClick={() => setVariant("pie")}
-          className={`rounded-full px-2 py-0.5 uppercase tracking-[0.16em] ${
-            variant === "pie"
-              ? "bg-neutral-200 text-neutral-900"
-              : "bg-transparent text-neutral-500 hover:text-neutral-200"
-          }`}
-        >
-          Pie
-        </button>
-        <button
-          type="button"
-          onClick={() => setVariant("bars")}
-          className={`rounded-full px-2 py-0.5 uppercase tracking-[0.16em] ${
-            variant === "bars"
-              ? "bg-neutral-200 text-neutral-900"
-              : "bg-transparent text-neutral-500 hover:text-neutral-200"
-          }`}
-        >
-          Bars
-        </button>
+    <div className="flex h-full flex-col rounded-xl border border-neutral-800/70 bg-neutral-950/50 px-2 py-2 ring-1 ring-white/[0.02]">
+      <div className="mb-2 flex justify-end gap-1 pr-1 pt-0.5">
+        <div className="inline-flex rounded-full border border-neutral-800/80 bg-neutral-950/40 p-0.5 text-[10px] text-neutral-500">
+          <button
+            type="button"
+            onClick={() => setVariant("pie")}
+            className={`rounded-full px-2.5 py-1 font-semibold uppercase tracking-[0.14em] transition-all ${
+              variant === "pie"
+                ? segmentActive
+                : "text-neutral-500 hover:text-neutral-300"
+            }`}
+          >
+            Pie
+          </button>
+          <button
+            type="button"
+            onClick={() => setVariant("bars")}
+            className={`rounded-full px-2.5 py-1 font-semibold uppercase tracking-[0.14em] transition-all ${
+              variant === "bars"
+                ? segmentActive
+                : "text-neutral-500 hover:text-neutral-300"
+            }`}
+          >
+            Bars
+          </button>
+        </div>
       </div>
 
       <div className="relative flex-1">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { StatsCards } from "../components/dashboard/StatsCards";
 import { WeeklyHoursChart } from "../features/analytics/components/WeeklyHoursChart";
 import { CategoryDistributionChart } from "../features/analytics/components/CategoryDistributionChart";
@@ -12,13 +12,76 @@ const RANGES = [
   { key: 30, label: "Month" },
 ];
 
+const panelClass =
+  "zs-panel overflow-hidden rounded-2xl border border-neutral-800/80 bg-neutral-900/80 ring-1 ring-white/[0.03]";
+
 function startOfWeekMonday(ref: Date): Date {
   const d = new Date(ref);
   d.setHours(0, 0, 0, 0);
-  const day = d.getDay(); // Sun=0..Sat=6
+  const day = d.getDay();
   const diff = (day + 6) % 7;
   d.setDate(d.getDate() - diff);
   return d;
+}
+
+type PeriodNavProps = {
+  onPrev: () => void;
+  onNext: () => void;
+  canGoNext: boolean;
+  isWife: boolean;
+};
+
+function PeriodNav({ onPrev, onNext, canGoNext, isWife }: PeriodNavProps) {
+  const navHover = isWife
+    ? "hover:border-pink-500/50 hover:text-pink-300"
+    : "hover:border-amber-500/50 hover:text-amber-400";
+
+  return (
+    <div className="inline-flex items-center gap-1">
+      <button
+        type="button"
+        className={`flex h-8 w-8 items-center justify-center rounded-full border border-neutral-800/80 bg-neutral-950/60 text-sm text-neutral-300 transition-colors ${navHover}`}
+        onClick={onPrev}
+        aria-label="Previous period"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        className={`flex h-8 w-8 items-center justify-center rounded-full border border-neutral-800/80 bg-neutral-950/60 text-sm text-neutral-300 transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-neutral-800/80 disabled:hover:text-neutral-300 ${navHover}`}
+        onClick={onNext}
+        disabled={!canGoNext}
+        aria-label="Next period"
+      >
+        ›
+      </button>
+    </div>
+  );
+}
+
+type SummaryStatProps = {
+  label: string;
+  value: ReactNode;
+  hint: ReactNode;
+  className?: string;
+};
+
+function SummaryStat({ label, value, hint, className = "" }: SummaryStatProps) {
+  return (
+    <div
+      className={`rounded-xl border border-neutral-800/70 bg-neutral-950/50 px-4 py-3 ${className}`}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+        {label}
+      </p>
+      <div className="mt-1.5 text-lg font-semibold tabular-nums tracking-tight text-neutral-50">
+        {value}
+      </div>
+      <div className="mt-1 text-[11px] leading-relaxed text-neutral-500">
+        {hint}
+      </div>
+    </div>
+  );
 }
 
 export function AnalyticsPage() {
@@ -28,6 +91,14 @@ export function AnalyticsPage() {
   const { logs, categories } = useAppState();
   const { theme } = useTheme();
   const isWife = theme === "wife";
+
+  const segmentTrack =
+    "inline-flex items-center gap-0.5 rounded-full border border-neutral-800/80 bg-neutral-950/50 p-1 backdrop-blur-sm";
+  const segmentActive = isWife
+    ? "bg-pink-500 text-white shadow-sm shadow-pink-950/30 ring-1 ring-pink-400/30"
+    : "bg-amber-500 text-neutral-950 shadow-sm shadow-amber-950/30 ring-1 ring-amber-400/40";
+  const segmentInactive =
+    "text-neutral-500 hover:bg-neutral-800/50 hover:text-neutral-200";
 
   const chartAnchorDate = useMemo(() => {
     const base = new Date();
@@ -89,11 +160,14 @@ export function AnalyticsPage() {
       rangeDays === 7
         ? 7
         : chartLogs.length > 0
-          ? new Date(chartAnchorDate.getFullYear(), chartAnchorDate.getMonth() + 1, 0).getDate()
+          ? new Date(
+              chartAnchorDate.getFullYear(),
+              chartAnchorDate.getMonth() + 1,
+              0,
+            ).getDate()
           : 30;
     const avgSession = count > 0 ? Math.round(total / count) : 0;
-    const avgPerDay =
-      windowDays > 0 ? Math.round(total / windowDays) : 0;
+    const avgPerDay = windowDays > 0 ? Math.round(total / windowDays) : 0;
     const ratio = total > 0 ? Math.round((deep / total) * 100) : 0;
     const distribution = getCategoryDistribution(chartLogs, categories);
     const top = distribution.sort((a, b) => b.minutes - a.minutes)[0];
@@ -147,37 +221,68 @@ export function AnalyticsPage() {
     return `${startLabel} – ${endLabel}`;
   }, [rangeDays, chartAnchorDate]);
 
-  return (
-    <div className="flex h-full flex-col gap-4">
-      <header className="mb-2 flex items-baseline justify-between">
-        <div>
-          <h1 className="text-lg font-semibold tracking-wide text-neutral-100">
-            Analytics
-          </h1>
-          <p className="mt-1 text-xs text-neutral-500">
-            Hours, categories, and deep work over time.
-          </p>
-        </div>
+  const periodLabel = rangeDays === 7 ? weekLabel : monthLabel;
+  const canGoNextPeriod =
+    rangeDays === 7 ? weekOffset > 0 : monthOffset < 0;
 
-        <div className="flex items-center gap-2 text-[11px] text-neutral-400">
-          <span className="uppercase tracking-[0.18em] text-neutral-500">
-            Range
-          </span>
-          <div className="inline-flex rounded-full border border-neutral-700 bg-neutral-950/40 p-[2px]">
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                type="button"
-                onClick={() => setRangeDays(r.key)}
-                className={`rounded-full px-3 py-1 text-[11px] ${
-                  rangeDays === r.key
-                    ? "bg-neutral-200 text-neutral-900"
-                    : "text-neutral-400 hover:text-neutral-100"
-                }`}
-              >
-                {r.label}
-              </button>
-            ))}
+  function handlePrevPeriod() {
+    if (rangeDays === 7) setWeekOffset((v) => v + 1);
+    else setMonthOffset((v) => v - 1);
+  }
+
+  function handleNextPeriod() {
+    if (rangeDays === 7) setWeekOffset((v) => Math.max(0, v - 1));
+    else setMonthOffset((v) => Math.min(0, v + 1));
+  }
+
+  return (
+    <div className="flex h-full flex-col gap-5">
+      <header className="relative overflow-hidden rounded-2xl border border-neutral-800/80 bg-neutral-900/60 px-5 py-4 ring-1 ring-white/[0.03]">
+        <div
+          className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full blur-3xl ${
+            isWife ? "bg-pink-500/10" : "bg-amber-500/10"
+          }`}
+          aria-hidden
+        />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-neutral-500">
+              Performance
+            </p>
+            <h1 className="mt-1 text-xl font-semibold tracking-tight text-neutral-50">
+              Analytics
+            </h1>
+            <p className="mt-1 max-w-md text-xs leading-relaxed text-neutral-500">
+              Hours, categories, and deep work over time.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span
+              className={`hidden text-[11px] font-medium tabular-nums sm:inline ${
+                isWife ? "text-pink-300/80" : "text-amber-300/80"
+              }`}
+            >
+              {formatMinutesHuman(totalMinutes)} in range
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                Range
+              </span>
+              <div className={segmentTrack}>
+                {RANGES.map((r) => (
+                  <button
+                    key={r.key}
+                    type="button"
+                    onClick={() => setRangeDays(r.key)}
+                    className={`rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-all duration-200 ${
+                      rangeDays === r.key ? segmentActive : segmentInactive
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -188,139 +293,117 @@ export function AnalyticsPage() {
         periodLabel={rangeDays === 30 ? "This month" : "This week"}
       />
 
-      <section className="zs-panel border border-neutral-800 bg-neutral-900/80 p-4">
-        <header className="mb-3 flex items-center justify-between">
+      <section className={`${panelClass} p-4 md:p-5`}>
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold tracking-wide text-neutral-200">
-              Focus Summary
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
+              Breakdown
+            </p>
+            <h2 className="mt-0.5 text-sm font-semibold tracking-wide text-neutral-100">
+              Focus summary
             </h2>
-            <p className="mt-0.5 text-xs text-neutral-500">
-              {rangeDays === 7 ? `Selected week • ${weekLabel}` : monthLabel || "Selected month"}
+            <p className="mt-0.5 text-[11px] text-neutral-500">
+              {rangeDays === 7
+                ? `Selected week · ${weekLabel}`
+                : monthLabel || "Selected month"}
             </p>
           </div>
-          <div className="text-right text-xs text-neutral-400">
-            <div>Total: {formatMinutesHuman(totalMinutes)}</div>
-            <div className="mt-0.5">Deep work: {formatMinutesHuman(deepMinutes)}</div>
+          <div className="flex flex-wrap items-center gap-2 text-right text-xs">
+            <span className="rounded-full border border-neutral-800/80 bg-neutral-950/50 px-3 py-1 tabular-nums text-neutral-400">
+              Total {formatMinutesHuman(totalMinutes)}
+            </span>
+            <span
+              className={`rounded-full border border-neutral-800/80 px-3 py-1 tabular-nums ${
+                isWife
+                  ? "bg-pink-500/10 text-pink-300/90"
+                  : "bg-amber-500/10 text-amber-300/90"
+              }`}
+            >
+              Deep {formatMinutesHuman(deepMinutes)}
+            </span>
           </div>
         </header>
-        <div className="mt-2 grid gap-3 text-xs text-neutral-300 sm:grid-cols-3">
-          <div className="rounded-md border border-neutral-800/80 bg-neutral-950/60 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-              Sessions
-            </div>
-            <div className="mt-1 text-lg font-semibold tabular-nums text-neutral-50">
-              {sessionsCount}
-            </div>
-            <div className="mt-1 text-[11px] text-neutral-500">
-              Total entries in this window
-            </div>
-          </div>
-          <div className="rounded-md border border-neutral-800/80 bg-neutral-950/60 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-              Avg session
-            </div>
-            <div className="mt-1 text-lg font-semibold tabular-nums text-neutral-50">
-              {formatMinutesHuman(avgSessionMinutes)}
-            </div>
-            <div className="mt-1 text-[11px] text-neutral-500">
-              Per completed session
-            </div>
-          </div>
-          <div className="rounded-md border border-neutral-800/80 bg-neutral-950/60 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-              Avg per day
-            </div>
-            <div className="mt-1 text-lg font-semibold tabular-nums text-neutral-50">
-              {formatMinutesHuman(avgPerDayMinutes)}
-            </div>
-            <div className="mt-1 text-[11px] text-neutral-500">
-              Based on selected range
-            </div>
-          </div>
-          <div className="rounded-md border border-neutral-800/80 bg-neutral-950/60 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-              Deep work ratio
-            </div>
-            <div className="mt-1 text-lg font-semibold tabular-nums text-neutral-50">
-              {deepMinutes === 0 && totalMinutes === 0
-                ? "—"
-                : `${deepRatio}%`}
-            </div>
-            <div className="mt-1 text-[11px] text-neutral-500">
-              {formatMinutesHuman(deepMinutes)} of{" "}
-              {formatMinutesHuman(totalMinutes)}
-            </div>
-          </div>
-          <div className="rounded-md border border-neutral-800/80 bg-neutral-950/60 px-3 py-2 sm:col-span-2">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-              Most focused category
-            </div>
-            {topCategory ? (
+
+        <div className="grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3">
+          <SummaryStat
+            label="Sessions"
+            value={sessionsCount}
+            hint="Total entries in this window"
+          />
+          <SummaryStat
+            label="Avg session"
+            value={formatMinutesHuman(avgSessionMinutes)}
+            hint="Per completed session"
+          />
+          <SummaryStat
+            label="Avg per day"
+            value={formatMinutesHuman(avgPerDayMinutes)}
+            hint="Based on selected range"
+          />
+          <SummaryStat
+            label="Deep work ratio"
+            value={
+              deepMinutes === 0 && totalMinutes === 0 ? "—" : `${deepRatio}%`
+            }
+            hint={
               <>
-                <div className="mt-1 text-sm font-semibold text-neutral-50">
-                  {topCategory.name}
-                </div>
-                <div className="mt-0.5 text-[11px] text-neutral-500">
-                  {formatMinutesHuman(topCategory.minutes)} in this window
-                </div>
+                {formatMinutesHuman(deepMinutes)} of{" "}
+                {formatMinutesHuman(totalMinutes)}
               </>
-            ) : (
-              <div className="mt-1 text-[11px] text-neutral-500">
-                Not enough data yet to determine a top category.
-              </div>
-            )}
-          </div>
+            }
+          />
+          <SummaryStat
+            label="Top category"
+            className="sm:col-span-2 lg:col-span-2"
+            value={
+              topCategory ? (
+                <span className="flex items-center gap-2">
+                  {topCategory.color ? (
+                    <span
+                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: topCategory.color }}
+                      aria-hidden
+                    />
+                  ) : null}
+                  {topCategory.name}
+                </span>
+              ) : (
+                "—"
+              )
+            }
+            hint={
+              topCategory
+                ? `${formatMinutesHuman(topCategory.minutes)} in this window`
+                : "Not enough data yet to determine a top category."
+            }
+          />
         </div>
       </section>
 
       <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
-        <section className="zs-panel flex h-[420px] flex-col border border-neutral-800 bg-neutral-900/80 p-4">
-          <header className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold tracking-wide text-neutral-200">
-              Hours by Day
-            </h2>
-            <div className="flex items-center gap-2 text-[11px] text-neutral-500">
-              <span className="uppercase tracking-[0.18em]">
-                {rangeDays === 7 ? `Week • ${weekLabel}` : monthLabel}
+        <section className={`${panelClass} flex h-[440px] flex-col p-4 md:p-5`}>
+          <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                Daily rhythm
+              </p>
+              <h2 className="mt-0.5 text-sm font-semibold tracking-wide text-neutral-100">
+                Hours by day
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="hidden text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500 sm:inline">
+                {rangeDays === 7 ? weekLabel : monthLabel}
               </span>
-              <div className="inline-flex items-center gap-1">
-                <button
-                  type="button"
-                  className={`h-6 w-6 rounded-full border border-neutral-700 text-neutral-400 ${
-                    isWife
-                      ? "hover:border-pink-500 hover:text-pink-300"
-                      : "hover:border-amber-500 hover:text-amber-300"
-                  }`}
-                  onClick={() =>
-                    rangeDays === 7
-                      ? setWeekOffset((v) => v + 1)
-                      : setMonthOffset((v) => v - 1)
-                  }
-                  aria-label="Previous period"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  className={`h-6 w-6 rounded-full border border-neutral-700 text-neutral-400 disabled:opacity-40 ${
-                    isWife
-                      ? "hover:border-pink-500 hover:text-pink-300"
-                      : "hover:border-amber-500 hover:text-amber-300"
-                  }`}
-                  onClick={() =>
-                    rangeDays === 7
-                      ? setWeekOffset((v) => Math.max(0, v - 1))
-                      : setMonthOffset((v) => Math.min(0, v + 1))
-                  }
-                  disabled={rangeDays === 7 ? weekOffset === 0 : monthOffset === 0}
-                  aria-label="Next period"
-                >
-                  ›
-                </button>
-              </div>
+              <PeriodNav
+                onPrev={handlePrevPeriod}
+                onNext={handleNextPeriod}
+                canGoNext={canGoNextPeriod}
+                isWife={isWife}
+              />
             </div>
           </header>
-          <div className="mt-1 flex-1">
+          <div className="min-h-0 flex-1">
             <WeeklyHoursChart
               days={rangeDays === 7 ? 7 : 30}
               logsOverride={chartLogs}
@@ -331,53 +414,29 @@ export function AnalyticsPage() {
           </div>
         </section>
 
-        <section className="zs-panel flex h-[420px] flex-col border border-neutral-800 bg-neutral-900/80 p-4">
-          <header className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold tracking-wide text-neutral-200">
-              Category Distribution
-            </h2>
-            <div className="flex items-center gap-2 text-[11px] text-neutral-500">
-              <span className="uppercase tracking-[0.18em]">
-                {rangeDays === 7 ? `Week • ${weekLabel}` : monthLabel}
+        <section className={`${panelClass} flex h-[440px] flex-col p-4 md:p-5`}>
+          <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                Distribution
+              </p>
+              <h2 className="mt-0.5 text-sm font-semibold tracking-wide text-neutral-100">
+                By category
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="hidden text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-500 sm:inline">
+                {periodLabel}
               </span>
-              <div className="inline-flex items-center gap-1">
-                <button
-                  type="button"
-                  className={`h-6 w-6 rounded-full border border-neutral-700 text-neutral-400 ${
-                    isWife
-                      ? "hover:border-pink-500 hover:text-pink-300"
-                      : "hover:border-amber-500 hover:text-amber-300"
-                  }`}
-                  onClick={() =>
-                    rangeDays === 7
-                      ? setWeekOffset((v) => v + 1)
-                      : setMonthOffset((v) => v - 1)
-                  }
-                  aria-label="Previous period"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  className={`h-6 w-6 rounded-full border border-neutral-700 text-neutral-400 disabled:opacity-40 ${
-                    isWife
-                      ? "hover:border-pink-500 hover:text-pink-300"
-                      : "hover:border-amber-500 hover:text-amber-300"
-                  }`}
-                  onClick={() =>
-                    rangeDays === 7
-                      ? setWeekOffset((v) => Math.max(0, v - 1))
-                      : setMonthOffset((v) => Math.min(0, v + 1))
-                  }
-                  disabled={rangeDays === 7 ? weekOffset === 0 : monthOffset === 0}
-                  aria-label="Next period"
-                >
-                  ›
-                </button>
-              </div>
+              <PeriodNav
+                onPrev={handlePrevPeriod}
+                onNext={handleNextPeriod}
+                canGoNext={canGoNextPeriod}
+                isWife={isWife}
+              />
             </div>
           </header>
-          <div className="mt-1 flex-1">
+          <div className="min-h-0 flex-1">
             <CategoryDistributionChart logsOverride={chartLogs} />
           </div>
         </section>
@@ -385,4 +444,3 @@ export function AnalyticsPage() {
     </div>
   );
 }
-

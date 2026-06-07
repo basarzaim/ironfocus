@@ -8,6 +8,17 @@ import { shouldPlayFocusAutoCompleteNotify } from "../../lib/focusCompletionNoti
 const PRESETS = [30, 45, 60, 90, 120, 180];
 const PLANNED_MINUTES_STORAGE_KEY = "ironfocus-timer-planned-minutes";
 
+/** Vintage chronometer assets (public/chronometer/). */
+const CHRONO_ASSET_V = "3";
+const CHRONO_DIAL_SRC = `/chronometer/dial.png?v=${CHRONO_ASSET_V}`;
+const CHRONO_HAND_SRC = `/chronometer/hand.png?v=${CHRONO_ASSET_V}`;
+/** Dial face hub within the dial PNG (%). Crown makes this sit slightly below geometric center. */
+const CHRONO_DIAL_CENTER = { x: 50, y: 56.5 };
+/** Hand hub position within the hand PNG (%), and its rest angle (clockwise from 12). */
+const CHRONO_HAND_PIVOT = { x: 20, y: 79, baseAngleDeg: 49 };
+/** Hand size relative to the dial container. */
+const CHRONO_HAND_SCALE = 0.45;
+
 type TimerPanelProps = {
   focusMode: boolean;
   onToggleFocusMode: () => void;
@@ -36,35 +47,50 @@ export function TimerPanel({
   const [error, setError] = useState<string | null>(null);
   const [plannedCategoryId, setPlannedCategoryId] = useState("");
   const [uiMode, setUiMode] = useState<"timer" | "stopwatch">("timer");
-  const [customMinutes, setCustomMinutes] = useState<number>(
-    initialPlanned ?? 30,
-  );
-  const [isDraggingDial, setIsDraggingDial] = useState(false);
   const [plannedMinutes, setPlannedMinutes] = useState<number | null>(
     initialPlanned ?? 30,
   );
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [showDiscardSessionModal, setShowDiscardSessionModal] = useState(false);
 
-  const baseAngleDeg = (customMinutes / 180) * 360;
+  // Vintage chronometer: the single hand is dragged to set the duration.
+  const [isDraggingDial, setIsDraggingDial] = useState(false);
 
-  function updateCustomFromPointer(e: PointerEvent<HTMLButtonElement>) {
-    if (!canAdjustDial) return;
+  function updateDialFromPointer(e: PointerEvent<HTMLButtonElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
     const dx = e.clientX - cx;
     const dy = e.clientY - cy;
-    const angleRad = Math.atan2(dy, dx); // -PI..PI, 0 at +X, CCW
-    let angleDeg = (angleRad * 180) / Math.PI; // -180..180
-    // Shift so 0deg is at top (-Y) and increase clockwise 0..360
-    angleDeg = (angleDeg + 450) % 360;
-    const minutesRaw = (angleDeg / 360) * 180;
-    // Snap to 1‑minute steps between 1 and 180.
-    const snapped = Math.round(minutesRaw);
-    const clamped = Math.max(1, Math.min(180, snapped));
-    setCustomMinutes(clamped);
-    setPlannedMinutes(clamped > 0 ? clamped : null);
+    // 0deg at the top (12 o'clock), increasing clockwise.
+    let deg = (Math.atan2(dx, -dy) * 180) / Math.PI;
+    if (deg < 0) deg += 360;
+    // Full sweep (360deg) maps to the 0..180 minute scale.
+    let minutes = Math.round((deg / 360) * 180);
+    minutes = Math.max(1, Math.min(180, minutes));
+    setPlannedMinutes(minutes);
+  }
+
+  function handleDialPointerDown(e: PointerEvent<HTMLButtonElement>) {
+    if (!canAdjustDial) return;
+    setIsDraggingDial(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    updateDialFromPointer(e);
+  }
+
+  function handleDialPointerMove(e: PointerEvent<HTMLButtonElement>) {
+    if (!isDraggingDial || !canAdjustDial) return;
+    updateDialFromPointer(e);
+  }
+
+  function handleDialPointerUp(e: PointerEvent<HTMLButtonElement>) {
+    if (!isDraggingDial) return;
+    setIsDraggingDial(false);
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
   }
 
   function formatPlannedTime(minutes: number): string {
@@ -88,16 +114,15 @@ export function TimerPanel({
     ? formatPlannedTime(plannedMinutes)
     : timer.displayTime;
 
-  const { theme, colorMode } = useTheme();
-  const isLight = colorMode === "light";
-  const isWife = theme === "wife";
-
+  // The hand is only draggable while idle in timer mode (setting a duration).
   const canAdjustDial =
     uiMode === "timer" &&
-    timer.mode === "idle" &&
     !timer.isRunning &&
     !timer.sessionReadyToLog &&
-    !timer.lastSession;
+    timer.mode === "idle";
+
+  const { theme } = useTheme();
+  const isWife = theme === "wife";
 
   function playSingleBeep() {
     if (typeof window === "undefined") return;
@@ -372,13 +397,13 @@ export function TimerPanel({
 
   /** Compact toolbar on dashboard card only (full-screen focus mode keeps larger controls). */
   const segmentTrackClassDashboard =
-    "inline-flex rounded-lg border border-neutral-700/90 bg-neutral-950/80 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
+    "inline-flex items-center gap-1 rounded-full border border-neutral-800/80 bg-neutral-900/50 p-1 backdrop-blur-sm";
   const segmentBtnBaseDashboard =
-    "min-h-[32px] min-w-[88px] rounded-md px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-all duration-200";
+    "min-h-[34px] min-w-[94px] rounded-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-all duration-200";
 
   const focusModeEnterClass = isWife
-    ? "border-pink-500/35 bg-gradient-to-br from-pink-500/25 via-pink-600/10 to-neutral-950 text-pink-50 shadow-lg shadow-pink-950/25 ring-1 ring-pink-400/25 hover:border-pink-400/50 hover:from-pink-500/35 hover:shadow-pink-900/35"
-    : "border-amber-500/35 bg-gradient-to-br from-amber-500/20 via-amber-600/10 to-neutral-950 text-amber-50 shadow-lg shadow-black/30 ring-1 ring-amber-400/20 hover:border-amber-400/45 hover:from-amber-500/30 hover:shadow-amber-950/20";
+    ? "border-pink-500/30 bg-pink-500/10 text-pink-200 ring-1 ring-inset ring-pink-400/10 hover:border-pink-400/50 hover:bg-pink-500/20 hover:text-pink-100"
+    : "border-amber-500/30 bg-amber-500/10 text-amber-200 ring-1 ring-inset ring-amber-400/10 hover:border-amber-400/50 hover:bg-amber-500/20 hover:text-amber-100";
 
   const focusModeExitClass =
     "border-neutral-600 bg-neutral-900/90 text-neutral-100 shadow-md shadow-black/25 ring-1 ring-white/5 hover:border-neutral-500 hover:bg-neutral-800 hover:text-white";
@@ -469,12 +494,12 @@ export function TimerPanel({
                 type="button"
                 onClick={() => onToggleFocusMode()}
                 className={`inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl border px-5 py-2 text-[11px] font-bold uppercase tracking-[0.18em] transition-all ${focusModeExitClass}`}
-                aria-label="Exit focus mode and return to dashboard"
+                aria-label="Exit focus mode"
               >
                 <span className="opacity-70" aria-hidden>
                   ←
                 </span>
-                Dashboard
+                Exit focus
               </button>
             </div>
           </div>
@@ -769,9 +794,10 @@ export function TimerPanel({
 
   const greeting = (() => {
     const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
+    if (h >= 5 && h < 12) return "Good morning";
+    if (h >= 12 && h < 17) return "Good afternoon";
+    if (h >= 17 && h < 22) return "Good evening";
+    return "Good night";
   })();
 
   const statusText = timer.isRunning
@@ -852,28 +878,20 @@ export function TimerPanel({
               onToggleFocusMode();
               setShowCompletionPopup(false);
             }}
-            className={`inline-flex min-h-[32px] items-center justify-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] transition-all ${focusModeEnterClass}`}
+            className={`inline-flex min-h-[34px] items-center justify-center gap-2 rounded-full border px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition-all ${focusModeEnterClass}`}
           >
-            <span
-              className={`flex h-5 w-5 items-center justify-center rounded border ${
-                isWife
-                  ? "border-pink-400/30 bg-pink-500/20 text-pink-100"
-                  : "border-amber-400/30 bg-amber-500/20 text-amber-100"
-              }`}
+            <svg
+              className="h-3.5 w-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               aria-hidden
             >
-              <svg
-                className="h-3 w-3"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-              </svg>
-            </span>
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            </svg>
             Focus mode
           </button>
         </div>
@@ -934,127 +952,85 @@ export function TimerPanel({
               ))}
             </select>
           </div>
-          <div className="relative flex h-52 w-52 items-center justify-center md:h-60 md:w-60">
+          <div
+            className={`relative flex h-[21rem] w-[21rem] items-center justify-center md:h-[25.5rem] md:w-[25.5rem] ${
+              timer.isRunning
+                ? isWife
+                  ? "drop-shadow-[0_0_28px_rgba(236,72,153,0.18)]"
+                  : "drop-shadow-[0_0_28px_rgba(180,120,40,0.16)]"
+                : "drop-shadow-[0_14px_36px_rgba(20,14,8,0.62)]"
+            }`}
+          >
             <button
               type="button"
-              onPointerDown={(e) => {
-                if (!canAdjustDial) return;
-                setIsDraggingDial(true);
-                e.currentTarget.setPointerCapture(e.pointerId);
-                updateCustomFromPointer(e);
-              }}
-              onPointerMove={(e) => {
-                if (!isDraggingDial) return;
-                updateCustomFromPointer(e);
-              }}
-              onPointerUp={(e) => {
-                setIsDraggingDial(false);
-                e.currentTarget.releasePointerCapture(e.pointerId);
-              }}
-              className={`relative flex h-full w-full items-center justify-center rounded-full ${
+              onPointerDown={handleDialPointerDown}
+              onPointerMove={handleDialPointerMove}
+              onPointerUp={handleDialPointerUp}
+              onPointerCancel={handleDialPointerUp}
+              aria-label="Set focus duration by dragging the hand"
+              title={
+                canAdjustDial ? "Drag the hand to set the duration" : undefined
+              }
+              className={`relative h-full w-full touch-none select-none overflow-visible rounded-full bg-transparent outline-none transition-transform duration-200 ${
                 canAdjustDial
-                  ? "cursor-grab active:cursor-grabbing"
-                  : "cursor-default opacity-80"
+                  ? isDraggingDial
+                    ? "cursor-grabbing scale-[1.02]"
+                    : "cursor-grab hover:scale-[1.01]"
+                  : "cursor-default"
               }`}
             >
               {(() => {
-                // Drive the arc from live time when running.
-                let dialAngleDeg = baseAngleDeg;
-                let centerMinutes = customMinutes;
-                let bottomLabel = "MIN";
-
-                if (
-                  uiMode === "timer" &&
-                  timer.mode === "focus" &&
-                  typeof timer.targetSeconds === "number" &&
-                  timer.targetSeconds > 0
-                ) {
-                  const total = timer.targetSeconds;
-                  const remaining = Math.max(0, total - timer.elapsedSeconds);
-                  const wholeMinutes = Math.round(remaining / 60);
-                  const clampedMinutes = Math.max(0, Math.min(180, wholeMinutes));
-                  dialAngleDeg = (clampedMinutes / 180) * 360;
-                  centerMinutes = clampedMinutes;
-                  bottomLabel = "REMAINING";
-                } else if (uiMode === "stopwatch") {
-                  const elapsedMinutes = Math.round(
-                    Math.max(0, timer.elapsedSeconds) / 60,
-                  );
-                  const clampedMinutes = Math.max(0, Math.min(180, elapsedMinutes));
-                  dialAngleDeg = (clampedMinutes / 180) * 360;
-                  centerMinutes = clampedMinutes;
-                  bottomLabel = "ELAPSED";
-                }
-
-                // SVG ring constants (viewBox 0 0 160 160, center 80 80)
-                const R = 68;
-                const circumference = 2 * Math.PI * R;
-                const progress = Math.min(1, dialAngleDeg / 360);
-                const dashOffset = circumference * (1 - progress);
-                const accentColor = isWife ? "#ec4899" : "#f59e0b";
-                const trackColor  = isLight
-                  ? "rgba(100,110,130,0.22)"
-                  : "rgba(255,255,255,0.07)";
-                const faceColor   = isLight ? "#e2e4ea" : "#08090f";
+                const dialMinutes = (() => {
+                  if (canAdjustDial) return plannedMinutes ?? 30;
+                  if (
+                    timer.mode === "focus" &&
+                    typeof timer.targetSeconds === "number"
+                  ) {
+                    return (
+                      Math.max(0, timer.targetSeconds - timer.elapsedSeconds) / 60
+                    );
+                  }
+                  return timer.elapsedSeconds / 60;
+                })();
+                const dialAngleDeg = ((dialMinutes % 180) / 180) * 360;
+                const handRotateDeg =
+                  dialAngleDeg - CHRONO_HAND_PIVOT.baseAngleDeg;
+                const handSizePct = CHRONO_HAND_SCALE * 100;
 
                 return (
-                  <>
-                    <svg
-                      className="absolute inset-0 h-full w-full"
-                      viewBox="0 0 160 160"
-                      fill="none"
-                      aria-hidden
+                  <div className="relative h-full w-full bg-transparent">
+                    <img
+                      src={CHRONO_DIAL_SRC}
+                      alt=""
+                      draggable={false}
+                      className="pointer-events-none block h-full w-full select-none object-contain [background:none]"
+                    />
+                    <div
+                      className={`pointer-events-none absolute ${
+                        isDraggingDial || timer.isRunning
+                          ? ""
+                          : "transition-transform duration-300 ease-out"
+                      }`}
+                      style={{
+                        left: `${CHRONO_DIAL_CENTER.x}%`,
+                        top: `${CHRONO_DIAL_CENTER.y}%`,
+                        transform: `rotate(${handRotateDeg}deg)`,
+                        transformOrigin: "0 0",
+                      }}
                     >
-                      {/* Dial face */}
-                      <circle cx="80" cy="80" r="76" fill={faceColor} />
-
-                      {/* Subtle outer rim */}
-                      <circle
-                        cx="80" cy="80" r="76"
-                        stroke={isLight ? "rgba(0,0,0,0.09)" : "rgba(255,255,255,0.04)"}
-                        strokeWidth="1"
+                      <img
+                        src={CHRONO_HAND_SRC}
+                        alt=""
+                        draggable={false}
+                        className="block max-w-none select-none [background:none]"
+                        style={{
+                          width: `${handSizePct}%`,
+                          height: "auto",
+                          transform: `translate(-${CHRONO_HAND_PIVOT.x}%, -${CHRONO_HAND_PIVOT.y}%)`,
+                        }}
                       />
-
-                      {/* Track ring */}
-                      <circle
-                        cx="80" cy="80" r={R}
-                        stroke={trackColor}
-                        strokeWidth="11"
-                      />
-
-                      {/* Progress arc — flat butt cap for clean industrial precision */}
-                      {progress > 0.005 && (
-                        <circle
-                          cx="80" cy="80" r={R}
-                          stroke={accentColor}
-                          strokeWidth="11"
-                          strokeLinecap="butt"
-                          strokeDasharray={circumference}
-                          strokeDashoffset={dashOffset}
-                          transform="rotate(-90 80 80)"
-                          style={{
-                            transition: timer.isRunning
-                              ? "stroke-dashoffset 0.9s linear"
-                              : undefined,
-                          }}
-                        />
-                      )}
-                    </svg>
-
-                    {/* Center text */}
-                    <div className="relative z-10 flex select-none flex-col items-center justify-center">
-                      <span
-                        className={`text-[32px] font-extrabold tabular-nums leading-none tracking-tight md:text-[38px] ${
-                          isWife ? "text-pink-100" : "text-amber-100"
-                        }`}
-                      >
-                        {centerMinutes.toString().padStart(2, "0")}
-                      </span>
-                      <span className="mt-1 text-[8px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
-                        {bottomLabel}
-                      </span>
                     </div>
-                  </>
+                  </div>
                 );
               })()}
             </button>
@@ -1114,7 +1090,6 @@ export function TimerPanel({
                 onClick={() => {
                   if (uiMode === "stopwatch" || hasActiveSession) return;
                   setPlannedMinutes(m);
-                  setCustomMinutes(m);
                 }}
                 disabled={uiMode === "stopwatch" || hasActiveSession}
                 className={`min-w-[76px] rounded-full border px-4 py-2 text-xs font-semibold tracking-[0.16em] shadow-sm ${

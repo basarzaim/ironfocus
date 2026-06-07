@@ -5,94 +5,222 @@ import { useTheme } from "../../state/ThemeProvider";
 type NavItem = {
   key: string;
   label: string;
+  icon: ReactNode;
 };
 
+const iconClass = "h-[18px] w-[18px] shrink-0";
+
 const NAV_ITEMS: NavItem[] = [
-  { key: "dashboard", label: "Dashboard" },
-  { key: "analytics", label: "Analytics" },
-  { key: "logs", label: "Logs" },
-  { key: "categories", label: "Categories" },
-  { key: "settings", label: "Settings" },
+  {
+    key: "focus",
+    label: "Focus",
+    icon: (
+      <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <circle cx="12" cy="13" r="8" />
+        <path strokeLinecap="round" d="M12 5V3M12 5c-1.2 0-2.2.8-2.5 2" />
+        <path strokeLinecap="round" d="M12 13l3-2" />
+      </svg>
+    ),
+  },
+  {
+    key: "analytics",
+    label: "Analytics",
+    icon: (
+      <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <path strokeLinecap="round" d="M4 19V5M4 19h16" />
+        <path strokeLinecap="round" d="M8 17V11M12 17V7M16 17v-4" />
+      </svg>
+    ),
+  },
+  {
+    key: "logs",
+    label: "Logs",
+    icon: (
+      <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 4h7l5 5v11a1 1 0 01-1 1H7a1 1 0 01-1-1V5a1 1 0 011-1z" />
+      </svg>
+    ),
+  },
+  {
+    key: "categories",
+    label: "Categories",
+    icon: (
+      <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <path strokeLinecap="round" d="M4 7h7v7H4zM13 7h7v4h-7zM13 13h7v4h-7z" />
+      </svg>
+    ),
+  },
+  {
+    key: "settings",
+    label: "Settings",
+    icon: (
+      <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+        <circle cx="12" cy="12" r="3" />
+        <path strokeLinecap="round" d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4" />
+      </svg>
+    ),
+  },
 ];
 
 type SidebarItemProps = {
   label: string;
   itemKey: string;
   active?: boolean;
-  icon?: ReactNode;
+  icon: ReactNode;
+  collapsed?: boolean;
   onSelect?: (key: string) => void;
 };
 
-function SidebarItem({ label, itemKey, active, icon, onSelect }: SidebarItemProps) {
+function SidebarItem({
+  label,
+  itemKey,
+  active,
+  icon,
+  collapsed,
+  onSelect,
+}: SidebarItemProps) {
+  const { theme } = useTheme();
+  const isWife = theme === "wife";
+
   return (
     <button
       type="button"
       onClick={() => onSelect?.(itemKey)}
-      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+      title={collapsed ? label : undefined}
+      aria-label={label}
+      className={`group relative flex w-full items-center rounded-xl text-sm font-medium transition-all duration-200 ${
+        collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2"
+      } ${
         active
-          ? "if-sidebar-item-active bg-neutral-800 text-neutral-50"
-          : "if-sidebar-item-inactive text-neutral-400 hover:bg-neutral-900 hover:text-neutral-50"
+          ? isWife
+            ? "bg-pink-500/15 text-pink-100 ring-1 ring-pink-500/30"
+            : "bg-amber-500/15 text-amber-100 ring-1 ring-amber-500/30"
+          : "text-neutral-400 hover:bg-neutral-900/80 hover:text-neutral-100"
       }`}
     >
-      {icon && <span className="text-neutral-500">{icon}</span>}
-      <span>{label}</span>
+      <span
+        className={`transition-colors ${
+          active
+            ? isWife
+              ? "text-pink-300"
+              : "text-amber-300"
+            : "text-neutral-500 group-hover:text-neutral-300"
+        }`}
+      >
+        {icon}
+      </span>
+      {!collapsed ? <span className="truncate">{label}</span> : null}
+      {collapsed && active ? (
+        <span
+          className={`absolute -right-0.5 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full ${
+            isWife ? "bg-pink-400" : "bg-amber-400"
+          }`}
+          aria-hidden
+        />
+      ) : null}
     </button>
   );
 }
 
 type SidebarProps = {
   activeKey: string;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   onChange: (key: string) => void;
 };
 
-export function Sidebar({ activeKey, onChange }: SidebarProps) {
+export function Sidebar({
+  activeKey,
+  collapsed,
+  onToggleCollapsed,
+  onChange,
+}: SidebarProps) {
   const { theme } = useTheme();
   const isWife = theme === "wife";
 
   return (
-    <aside className="if-sidebar flex h-screen w-56 flex-col border-r border-neutral-800 bg-black/90 px-4 py-5">
-      <div className="mb-8 flex items-center gap-3 px-1">
-        <div className="if-sidebar-logo-box flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950/60">
-          <img
-            src={appLogo}
-            alt="IronFocus"
-            className="h-full w-full object-contain"
-          />
+    <aside
+      className={`if-sidebar flex h-screen shrink-0 flex-col border-r border-neutral-800/80 bg-black/90 transition-[width,padding] duration-300 ease-out ${
+        collapsed ? "w-[4.25rem] px-2 py-4" : "w-56 px-4 py-5"
+      }`}
+    >
+      <div
+        className={`mb-6 flex items-center ${
+          collapsed ? "justify-center px-0" : "gap-3 px-1"
+        }`}
+      >
+        <div className="if-sidebar-logo-box flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950/60 ring-1 ring-white/[0.04]">
+          <img src={appLogo} alt="IronFocus" className="h-full w-full object-contain" />
         </div>
-        <div className="min-w-0">
-          <div
-            className={`text-xs font-semibold uppercase tracking-[0.25em] ${
-              isWife ? "text-pink-400" : "text-amber-400"
-            }`}
-          >
-            BASAR ZAIM
-          </div>
-          <div className="if-sidebar-brand mt-1 truncate text-sm font-medium text-neutral-400">
-            IronFocus
-          </div>
-          {isWife && (
-            <div className="mt-0.5 truncate text-[11px] text-pink-400">
-              💗 For my dearest wife 💗
+        {!collapsed ? (
+          <div className="min-w-0">
+            <div
+              className={`text-[10px] font-semibold uppercase tracking-[0.25em] ${
+                isWife ? "text-pink-400" : "text-amber-400"
+              }`}
+            >
+              BASAR ZAIM
             </div>
-          )}
-        </div>
+            <div className="if-sidebar-brand mt-0.5 truncate text-sm font-medium text-neutral-400">
+              IronFocus
+            </div>
+            {isWife ? (
+              <div className="mt-0.5 truncate text-[10px] text-pink-400/90">
+                💗 For my dearest wife 💗
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
+
       <nav className="space-y-1">
         {NAV_ITEMS.map((item) => (
           <SidebarItem
             key={item.key}
             label={item.label}
             itemKey={item.key}
+            icon={item.icon}
             active={item.key === activeKey}
+            collapsed={collapsed}
             onSelect={onChange}
           />
         ))}
       </nav>
 
-      <div className="if-sidebar-footer mt-auto pt-6 text-xs text-neutral-600">
-        <div className="font-mono tracking-tight">LOCAL • DESKTOP</div>
+      <div className="mt-auto space-y-3 pt-4">
+        {!collapsed ? (
+          <div className="if-sidebar-footer px-1 text-[10px] text-neutral-600">
+            <div className="font-mono tracking-tight">LOCAL • DESKTOP</div>
+          </div>
+        ) : null}
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className={`flex w-full items-center rounded-xl border border-neutral-800/80 bg-neutral-950/50 text-neutral-500 transition-colors hover:border-neutral-700 hover:bg-neutral-900 hover:text-neutral-300 ${
+            collapsed ? "justify-center py-2.5" : "gap-2 px-3 py-2"
+          }`}
+        >
+          <svg
+            className={`h-4 w-4 shrink-0 transition-transform duration-300 ${
+              collapsed ? "rotate-180" : ""
+            }`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            aria-hidden
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 18l-6-6 6-6" />
+          </svg>
+          {!collapsed ? (
+            <span className="text-[11px] font-medium uppercase tracking-[0.14em]">
+              Collapse
+            </span>
+          ) : null}
+        </button>
       </div>
     </aside>
   );
 }
-

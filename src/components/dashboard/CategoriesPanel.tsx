@@ -20,6 +20,14 @@ export function CategoriesPanel() {
 
   const canAdd = newName.trim().length > 0;
 
+  const accentFocus = isWife
+    ? "focus:border-pink-500/70"
+    : "focus:border-amber-500/70";
+  const accentBtn = isWife
+    ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
+    : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500";
+  const fieldClass = `rounded-lg border border-neutral-800/80 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none transition-colors placeholder:text-neutral-600 ${accentFocus}`;
+
   function startEdit(id: string, name: string) {
     setEditingId(id);
     setEditingName(name);
@@ -35,29 +43,45 @@ export function CategoriesPanel() {
   }
 
   return (
-    <section className="zs-panel border border-neutral-800 bg-neutral-900/80 p-6 min-h-[480px]">
-      <header className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-wide text-neutral-200">
-          Categories
-        </h2>
-        <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-          Local Only
+    <section className="zs-panel flex min-h-[480px] flex-col overflow-hidden rounded-2xl border border-neutral-800/80 bg-neutral-900/80 ring-1 ring-white/[0.03]">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-neutral-800/60 px-5 py-4">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500">
+            Library
+          </p>
+          <h2 className="mt-0.5 text-sm font-semibold tracking-wide text-neutral-100">
+            Your categories
+          </h2>
+          <p className="mt-0.5 text-[11px] text-neutral-500">
+            Drag to reorder · click name to rename
+          </p>
+        </div>
+        <span className="inline-flex items-center rounded-full border border-neutral-800/80 bg-neutral-950/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+          Local only
         </span>
       </header>
 
-      <div className="space-y-5">
-        <div className="flex gap-2">
+      <div className="flex flex-1 flex-col gap-5 p-5">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <label className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+              New category
+            </label>
             <input
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="Add new category"
-              className={`flex-1 rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                isWife
-                  ? "focus:border-pink-500/70"
-                  : "focus:border-amber-500/70"
-              }`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && canAdd) {
+                  e.preventDefault();
+                  addCategory(newName);
+                  setNewName("");
+                }
+              }}
+              placeholder="e.g. Deep work, Reading, Code review…"
+              className={`w-full ${fieldClass}`}
             />
+          </div>
           <button
             type="button"
             disabled={!canAdd}
@@ -66,106 +90,142 @@ export function CategoriesPanel() {
               addCategory(newName);
               setNewName("");
             }}
-            className={`inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${
-              isWife
-                ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
-                : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500"
-            }`}
+            className={`inline-flex shrink-0 items-center justify-center rounded-full border px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${accentBtn}`}
           >
-            Add
+            Add category
           </button>
         </div>
 
-        <div className="-mx-1 max-h-80 overflow-auto px-1">
+        <div className="min-h-0 flex-1 overflow-auto">
           {categories.length === 0 ? (
-            <div className="flex h-16 items-center justify-center rounded-md border border-dashed border-neutral-800/80 text-xs text-neutral-500">
-              No categories defined.
+            <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-neutral-800/80 bg-neutral-950/30 px-6 text-center">
+              <div
+                className={`flex h-11 w-11 items-center justify-center rounded-xl border border-neutral-800/80 bg-neutral-950/50 ${
+                  isWife ? "text-pink-400/70" : "text-amber-400/70"
+                }`}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  aria-hidden
+                >
+                  <path strokeLinecap="round" d="M4 7h7v7H4zM13 7h7v4h-7zM13 13h7v4h-7z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-neutral-300">
+                  No categories yet
+                </p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Add your first focus domain above to tag sessions and logs.
+                </p>
+              </div>
             </div>
           ) : (
             <ul
-              className="space-y-1 text-xs text-neutral-200"
+              className="space-y-2"
               onMouseUp={() => setDraggingId(null)}
             >
-              {categories.map((cat) => (
-                <li
-                  key={cat.id}
-                  onMouseEnter={() => {
-                    if (!draggingId || draggingId === cat.id) return;
-                    reorderCategories(draggingId, cat.id);
-                  }}
-                  className={`flex items-center gap-2 rounded-md border border-neutral-800/70 bg-neutral-950/40 px-2 py-1.5 transition-all duration-150 ${
-                    draggingId === cat.id
-                      ? "opacity-80 translate-x-1 translate-y-0.5"
-                      : "opacity-100 translate-x-0 translate-y-0"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onMouseDown={(e) => {
-                      if (e.button !== 0) return;
-                      setDraggingId(cat.id);
+              {categories.map((cat) => {
+                const swatch = cat.color ?? (isWife ? "#ec4899" : "#fbbf24");
+
+                return (
+                  <li
+                    key={cat.id}
+                    onMouseEnter={() => {
+                      if (!draggingId || draggingId === cat.id) return;
+                      reorderCategories(draggingId, cat.id);
                     }}
-                    className="flex h-6 w-4 items-center justify-center cursor-grab text-neutral-600 hover:text-neutral-300"
-                    aria-label={`Reorder ${cat.name}`}
+                    className={`group flex items-center gap-3 rounded-xl border border-neutral-800/70 bg-neutral-950/40 px-3 py-2.5 transition-all duration-150 hover:border-neutral-700/80 hover:bg-neutral-950/70 ${
+                      draggingId === cat.id
+                        ? "scale-[1.01] border-neutral-600/80 opacity-90 shadow-lg shadow-black/20"
+                        : ""
+                    }`}
                   >
-                    <span className="inline-block text-[14px] leading-none">
-                      ☰
-                    </span>
-                  </button>
-                  <div className="flex items-center gap-1">
-                    <span
-                      className="inline-block h-3.5 w-3.5 rounded-full border border-neutral-700"
-                      style={{
-                        backgroundColor: cat.color ?? "transparent",
-                      }}
-                    />
-                    <input
-                      type="color"
-                      aria-label={`Color for ${cat.name}`}
-                      value={cat.color ?? (isWife ? "#ec4899" : "#fbbf24")}
-                      onChange={(e) => updateCategoryColor(cat.id, e.target.value)}
-                      className="h-5 w-5 cursor-pointer rounded border border-neutral-700 bg-neutral-900 p-0 [color-scheme:dark]"
-                    />
-                  </div>
-                  {editingId === cat.id ? (
-                    <input
-                      type="text"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onBlur={commitEdit}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          commitEdit();
-                        } else if (e.key === "Escape") {
-                          setEditingId(null);
-                        }
-                      }}
-                      autoFocus
-                      className={`flex-1 rounded-sm border border-neutral-700 bg-neutral-950/70 px-2 py-1 text-xs text-neutral-100 outline-none ${
-                        isWife
-                          ? "focus:border-pink-500/70"
-                          : "focus:border-amber-500/70"
-                      }`}
-                    />
-                  ) : (
                     <button
                       type="button"
-                      onClick={() => startEdit(cat.id, cat.name)}
-                      className="flex-1 truncate text-left text-xs text-neutral-200 hover:text-neutral-50"
+                      onMouseDown={(e) => {
+                        if (e.button !== 0) return;
+                        setDraggingId(cat.id);
+                      }}
+                      className="flex h-8 w-5 shrink-0 cursor-grab items-center justify-center rounded-md text-neutral-600 transition-colors hover:bg-neutral-900 hover:text-neutral-400 active:cursor-grabbing"
+                      aria-label={`Reorder ${cat.name}`}
                     >
-                      {cat.name}
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-4 w-4"
+                        fill="currentColor"
+                        aria-hidden
+                      >
+                        <circle cx="9" cy="7" r="1.2" />
+                        <circle cx="15" cy="7" r="1.2" />
+                        <circle cx="9" cy="12" r="1.2" />
+                        <circle cx="15" cy="12" r="1.2" />
+                        <circle cx="9" cy="17" r="1.2" />
+                        <circle cx="15" cy="17" r="1.2" />
+                      </svg>
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => deleteCategory(cat.id)}
-                    className="text-[11px] text-neutral-500 hover:text-red-400"
-                  >
-                    Delete
-                  </button>
-                </li>
-              ))}
+
+                    <div
+                      className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-800/80"
+                      style={{ backgroundColor: `${swatch}22` }}
+                    >
+                      <span
+                        className="h-4 w-4 rounded-full ring-2 ring-white/10"
+                        style={{ backgroundColor: swatch }}
+                        aria-hidden
+                      />
+                      <input
+                        type="color"
+                        aria-label={`Color for ${cat.name}`}
+                        value={swatch}
+                        onChange={(e) =>
+                          updateCategoryColor(cat.id, e.target.value)
+                        }
+                        className="absolute inset-0 cursor-pointer opacity-0"
+                      />
+                    </div>
+
+                    {editingId === cat.id ? (
+                      <input
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onBlur={commitEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitEdit();
+                          } else if (e.key === "Escape") {
+                            setEditingId(null);
+                          }
+                        }}
+                        autoFocus
+                        className={`min-w-0 flex-1 ${fieldClass} py-1.5`}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startEdit(cat.id, cat.name)}
+                        className="min-w-0 flex-1 truncate text-left text-sm font-medium text-neutral-200 transition-colors hover:text-neutral-50"
+                      >
+                        {cat.name}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => deleteCategory(cat.id)}
+                      className="shrink-0 rounded-lg border border-transparent px-2.5 py-1.5 text-[11px] font-medium text-neutral-500 opacity-70 transition-all hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -173,4 +233,3 @@ export function CategoriesPanel() {
     </section>
   );
 }
-

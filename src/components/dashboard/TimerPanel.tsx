@@ -2,7 +2,7 @@ import { useEffect, useState, type PointerEvent } from "react";
 import { useAppState } from "../../state/AppStateProvider";
 import { useFocusTimerContext } from "../../features/timer/TimerProvider";
 import { useTheme } from "../../state/ThemeProvider";
-import { formatMinutesHuman } from "../../lib/time";
+import { formatMinutesHuman, parseTimeToDate } from "../../lib/time";
 import { shouldPlayFocusAutoCompleteNotify } from "../../lib/focusCompletionNotificationDedup";
 
 const PRESETS = [30, 45, 60, 90, 120, 180];
@@ -317,8 +317,6 @@ export function TimerPanel({
     const session = timer.consumeSessionForLogging();
     if (!session) return;
 
-    const minutes = Math.max(1, Math.round(session.durationSeconds / 60));
-
     const now = new Date();
     const toTimeValue = (d: Date) =>
       `${d.getHours().toString().padStart(2, "0")}:${d
@@ -326,14 +324,20 @@ export function TimerPanel({
         .toString()
         .padStart(2, "0")}`;
 
-    const startedAt = new Date(session.startedAt);
     const stoppedAt = session.stoppedAt ? new Date(session.stoppedAt) : now;
+    const durationMs = Math.max(1, session.durationSeconds) * 1000;
+    const startedAt = new Date(stoppedAt.getTime() - durationMs);
 
-    const startTime = toTimeValue(startedAt);
     const endTime = toTimeValue(stoppedAt);
+    const startTime = toTimeValue(startedAt);
 
-    const startFallback = new Date(now.getTime() - minutes * 60000);
-    const startTimeSafe = endTime <= startTime ? toTimeValue(startFallback) : startTime;
+    let startTimeSafe = startTime;
+    if (endTime <= startTime) {
+      const endParsed = parseTimeToDate(endTime);
+      if (endParsed) {
+        startTimeSafe = toTimeValue(new Date(endParsed.getTime() - durationMs));
+      }
+    }
 
     const result = addLogFromForm({
       title: logTitle || "Focus session",

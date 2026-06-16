@@ -1,23 +1,14 @@
-import { useEffect, useState, type PointerEvent } from "react";
+import { useEffect, useState } from "react";
 import { useAppState } from "../../state/AppStateProvider";
 import { useFocusTimerContext } from "../../features/timer/TimerProvider";
 import { useTheme } from "../../state/ThemeProvider";
 import { formatMinutesHuman, parseTimeToDate } from "../../lib/time";
 import { shouldPlayFocusAutoCompleteNotify } from "../../lib/focusCompletionNotificationDedup";
+import { LivingCore } from "../../features/timer/components/LivingCore";
 
 const PRESETS = [30, 45, 60, 90, 120, 180];
 const PLANNED_MINUTES_STORAGE_KEY = "ironfocus-timer-planned-minutes";
 
-/** Vintage chronometer assets (public/chronometer/). */
-const CHRONO_ASSET_V = "3";
-const CHRONO_DIAL_SRC = `${import.meta.env.BASE_URL}chronometer/dial.png?v=${CHRONO_ASSET_V}`;
-const CHRONO_HAND_SRC = `${import.meta.env.BASE_URL}chronometer/hand.png?v=${CHRONO_ASSET_V}`;
-/** Dial face hub within the dial PNG (%). Crown makes this sit slightly below geometric center. */
-const CHRONO_DIAL_CENTER = { x: 50, y: 56.5 };
-/** Hand hub position within the hand PNG (%), and its rest angle (clockwise from 12). */
-const CHRONO_HAND_PIVOT = { x: 20, y: 79, baseAngleDeg: 49 };
-/** Hand size relative to the dial container. */
-const CHRONO_HAND_SCALE = 0.45;
 
 type TimerPanelProps = {
   focusMode: boolean;
@@ -53,45 +44,6 @@ export function TimerPanel({
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [showDiscardSessionModal, setShowDiscardSessionModal] = useState(false);
 
-  // Vintage chronometer: the single hand is dragged to set the duration.
-  const [isDraggingDial, setIsDraggingDial] = useState(false);
-
-  function updateDialFromPointer(e: PointerEvent<HTMLButtonElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = e.clientX - cx;
-    const dy = e.clientY - cy;
-    // 0deg at the top (12 o'clock), increasing clockwise.
-    let deg = (Math.atan2(dx, -dy) * 180) / Math.PI;
-    if (deg < 0) deg += 360;
-    // Full sweep (360deg) maps to the 0..180 minute scale.
-    let minutes = Math.round((deg / 360) * 180);
-    minutes = Math.max(1, Math.min(180, minutes));
-    setPlannedMinutes(minutes);
-  }
-
-  function handleDialPointerDown(e: PointerEvent<HTMLButtonElement>) {
-    if (!canAdjustDial) return;
-    setIsDraggingDial(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
-    updateDialFromPointer(e);
-  }
-
-  function handleDialPointerMove(e: PointerEvent<HTMLButtonElement>) {
-    if (!isDraggingDial || !canAdjustDial) return;
-    updateDialFromPointer(e);
-  }
-
-  function handleDialPointerUp(e: PointerEvent<HTMLButtonElement>) {
-    if (!isDraggingDial) return;
-    setIsDraggingDial(false);
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      // ignore
-    }
-  }
 
   function formatPlannedTime(minutes: number): string {
     const totalSeconds = minutes * 60;
@@ -113,13 +65,6 @@ export function TimerPanel({
   const displayLabel = showPlannedTime
     ? formatPlannedTime(plannedMinutes)
     : timer.displayTime;
-
-  // The hand is only draggable while idle in timer mode (setting a duration).
-  const canAdjustDial =
-    uiMode === "timer" &&
-    !timer.isRunning &&
-    !timer.sessionReadyToLog &&
-    timer.mode === "idle";
 
   const { theme } = useTheme();
   const isWife = theme === "wife";
@@ -956,105 +901,25 @@ export function TimerPanel({
               ))}
             </select>
           </div>
+          <LivingCore
+            mode={timer.mode}
+            isRunning={timer.isRunning}
+            elapsedSeconds={timer.elapsedSeconds}
+            targetSeconds={timer.targetSeconds}
+            displayTime={displayLabel}
+            className="h-[21rem] w-[21rem] md:h-[25.5rem] md:w-[25.5rem]"
+          />
+
           <div
-            className={`relative flex h-[21rem] w-[21rem] items-center justify-center md:h-[25.5rem] md:w-[25.5rem] ${
+            className={`text-[11px] font-medium uppercase tracking-[0.25em] ${
               timer.isRunning
                 ? isWife
-                  ? "drop-shadow-[0_0_28px_rgba(236,72,153,0.18)]"
-                  : "drop-shadow-[0_0_28px_rgba(180,120,40,0.16)]"
-                : "drop-shadow-[0_14px_36px_rgba(20,14,8,0.62)]"
+                  ? "text-pink-300/90"
+                  : "text-amber-300/90"
+                : "text-neutral-500"
             }`}
           >
-            <button
-              type="button"
-              onPointerDown={handleDialPointerDown}
-              onPointerMove={handleDialPointerMove}
-              onPointerUp={handleDialPointerUp}
-              onPointerCancel={handleDialPointerUp}
-              aria-label="Set focus duration by dragging the hand"
-              title={
-                canAdjustDial ? "Drag the hand to set the duration" : undefined
-              }
-              className={`relative h-full w-full touch-none select-none overflow-visible rounded-full bg-transparent outline-none transition-transform duration-200 ${
-                canAdjustDial
-                  ? isDraggingDial
-                    ? "cursor-grabbing scale-[1.02]"
-                    : "cursor-grab hover:scale-[1.01]"
-                  : "cursor-default"
-              }`}
-            >
-              {(() => {
-                const dialMinutes = (() => {
-                  if (canAdjustDial) return plannedMinutes ?? 30;
-                  if (
-                    timer.mode === "focus" &&
-                    typeof timer.targetSeconds === "number"
-                  ) {
-                    return (
-                      Math.max(0, timer.targetSeconds - timer.elapsedSeconds) / 60
-                    );
-                  }
-                  return timer.elapsedSeconds / 60;
-                })();
-                const dialAngleDeg = ((dialMinutes % 180) / 180) * 360;
-                const handRotateDeg =
-                  dialAngleDeg - CHRONO_HAND_PIVOT.baseAngleDeg;
-                const handSizePct = CHRONO_HAND_SCALE * 100;
-
-                return (
-                  <div className="relative h-full w-full bg-transparent">
-                    <img
-                      src={CHRONO_DIAL_SRC}
-                      alt=""
-                      draggable={false}
-                      className="pointer-events-none block h-full w-full select-none object-contain [background:none]"
-                    />
-                    <div
-                      className={`pointer-events-none absolute ${
-                        isDraggingDial || timer.isRunning
-                          ? ""
-                          : "transition-transform duration-300 ease-out"
-                      }`}
-                      style={{
-                        left: `${CHRONO_DIAL_CENTER.x}%`,
-                        top: `${CHRONO_DIAL_CENTER.y}%`,
-                        transform: `rotate(${handRotateDeg}deg)`,
-                        transformOrigin: "0 0",
-                      }}
-                    >
-                      <img
-                        src={CHRONO_HAND_SRC}
-                        alt=""
-                        draggable={false}
-                        className="block max-w-none select-none [background:none]"
-                        style={{
-                          width: `${handSizePct}%`,
-                          height: "auto",
-                          transform: `translate(-${CHRONO_HAND_PIVOT.x}%, -${CHRONO_HAND_PIVOT.y}%)`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
-            </button>
-          </div>
-
-          <div className="flex flex-col items-center gap-2">
-            <div className="text-6xl font-semibold tabular-nums tracking-tight text-neutral-50 md:text-7xl">
-              {displayLabel}
-            </div>
-            <div
-              className={`text-[11px] font-medium uppercase tracking-[0.25em] ${
-                timer.isRunning
-                  ? isWife
-                    ? "text-pink-300/90"
-                    : "text-amber-300/90"
-                  : "text-neutral-500"
-              }`}
-            >
-              {statusText}
-            </div>
+            {statusText}
           </div>
 
           <div className="mt-1 flex flex-wrap justify-center gap-3">

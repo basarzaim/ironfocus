@@ -28,21 +28,28 @@ interface Particle {
 }
 
 interface Ring {
-  angle: number;   // current rotation (rad)
-  speed: number;   // rad/ms
+  angle: number;        // current rotation (rad)
+  speed: number;        // rad/ms
   dir: 1 | -1;
+  /** Slow envelope: modulates how much THIS ring responds to the shared breath signal.
+   *  Varies between ~0.25 and 1.0 on its own slow cycle, making ring spacing change
+   *  every breath without the rings ever fully decoupling from inhale/exhale. */
+  ampModPhase: number;  // initial phase of the amplitude-envelope oscillator
+  ampModFreq: number;   // frequency (rad/ms) of the amplitude envelope — all distinct
 }
 
 interface CanvasState {
   t: number;
   status: CoreStatus;
-  progress: number;    // 0..1 focus completion (0 for stopwatch)
-  depthParam: number;  // 0..1 unified animation depth driver (see frame fn)
+  progress: number;
+  depthParam: number;
   particles: Particle[];
   rings: Ring[];
-  jitterT: number;   // accumulated ms in PAUSED state
-  burstT: number;    // ms since entering FINISHED (clamped to 2000)
+  jitterT: number;
+  burstT: number;
   prevStatus: CoreStatus;
+  /** Lerped global scale: idle → 0.72 (compact), running → 1.0. */
+  coreScale: number;
 }
 
 // ── Palette (dark iron / bronze / molten gold) ─────────────────────────────────
@@ -60,6 +67,10 @@ const K = {
 } as const;
 
 // ── Utilities ──────────────────────────────────────────────────────────────────
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * Math.max(0, Math.min(1, t));
+}
 
 function rgba(hex: string, a: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -99,9 +110,12 @@ function mkParticles(maxR: number): Particle[] {
 
 function mkRings(): Ring[] {
   return [
-    { angle: 0,              speed: 0.000165, dir: -1 },
-    { angle: Math.PI / 4,   speed: 0.000238, dir:  1 },
-    { angle: Math.PI / 3,   speed: 0.000295, dir: -1 },
+    // Outer  — slowest rotation, amp envelope period ~47 s
+    { angle: 0,           speed: 0.000165, dir: -1, ampModPhase: 0,              ampModFreq: 0.000132 },
+    // Mid    — medium rotation, amp envelope period ~71 s
+    { angle: Math.PI / 4, speed: 0.000238, dir:  1, ampModPhase: Math.PI * 0.73, ampModFreq: 0.000088 },
+    // Inner  — fastest rotation, amp envelope period ~58 s
+    { angle: Math.PI / 3, speed: 0.000295, dir: -1, ampModPhase: Math.PI * 1.51, ampModFreq: 0.000109 },
   ];
 }
 
@@ -297,20 +311,34 @@ function drawParticles(
   t: number,
   status: CoreStatus,
   glowIntensity: number,
+  breathSignal: number,
+  orbitExpand: number,
 ) {
   const speedMult =
     status === "running" ? 1.6 : status === "idle" ? 0.28 : 0.04;
+
+  // On inhale, particle count feels higher: alpha surges up to 1.5×,
+  // revealing dim particles that sit below the normal visibility threshold.
+  const inhaleBoost = status === "running"
+    ? 0.48 + 1.02 * (0.5 + 0.5 * breathSignal)  // [0.48, 1.50]: exhale dims, inhale brightens
+    : 1.0;
   const alphaMult =
-    status === "running" ? 1.0 : status === "idle" ? 0.28 : 0.1;
+    (status === "running" ? 1.0 : status === "idle" ? 0.28 : 0.1) * inhaleBoost;
 
   for (const p of particles) {
     const angle = p.angle + p.speed * t * speedMult;
     const shimmer = 0.68 + 0.32 * Math.sin(t * 0.0019 + p.phase);
     const a = p.baseAlpha * alphaMult * shimmer;
-    if (a < 0.015) continue;
+    if (a < 0.007) continue;  // lower cutoff so more particles surface on inhale
 
-    const x = cx + p.orbitR * Math.cos(angle);
-    const y = cy + p.orbitR * Math.sin(angle);
+    // Per-particle amplitude envelope: slow sinusoid seeded from existing phase.
+    // Range [0.28, 1.0] — each particle responds differently to the shared breath,
+    // so relative orbital spacings shift each cycle without losing coherence.
+    const particleEnv = 0.28 + 0.72 * (0.5 + 0.5 * Math.sin(t * 0.000095 + p.phase * 2.3));
+    const effectiveOrbitR = p.orbitR * (1 + breathSignal * orbitExpand * particleEnv);
+
+    const x = cx + effectiveOrbitR * Math.cos(angle);
+    const y = cy + effectiveOrbitR * Math.sin(angle);
 
     ctx.save();
     if (glowIntensity > 0.12) {
@@ -338,14 +366,43 @@ function draw(
   const cy = cssH / 2;
   const maxR = Math.min(cssW, cssH) / 2;
 
-  // Ring radii
-  const rOuter = maxR * 0.91;
-  const rMid   = maxR * 0.75;
-  const rInner = maxR * 0.60;
+  // ── Ring radii: breath-coupled with per-ring amplitude envelopes ─────────────
+  //
+  // All rings share the same breath signal (inhale → expand, exhale → contract)
+  // but each ring's *response amplitude* drifts independently on a slow envelope.
+  // Because the three envelope periods are mutually incommensurable (~47 / 71 / 58 s),
+  // the spacing between rings changes organically every breath cycle.
+  //
+  //   r_i = baseR_i × (1 + breathSignal × baseExpand × ampEnv_i)
+  //
+  // ampEnv_i ∈ [0.25, 1.0] — how strongly ring i responds to the current breath.
+
+  // Breath signal: same frequency formula as the core orb so rings move with it.
+  const breathFreqRings =
+    st.status === "running" ? 0.00065 - st.depthParam * 0.00035
+    : 0.000175; // idle / other: very slow baseline
+  const breathSignal = Math.sin(st.t * breathFreqRings); // −1 = exhale, +1 = inhale
+
+  const baseExpand =
+    st.status === "running"  ? 0.16 + st.depthParam * 0.10 :
+    st.status === "finished" ? 0.10 :
+    st.status === "paused"   ? 0.018 :
+    0.06;                              // idle
+
+  const baseRadii = [maxR * 0.91 * st.coreScale, maxR * 0.75 * st.coreScale, maxR * 0.60 * st.coreScale] as const;
+  const [rOuter, rMid, rInner] = baseRadii.map((base, i) => {
+    // Amplitude envelope per ring: range [0.65, 1.0].
+    // Floor at 0.65 ensures every ring always breathes visibly (≥65 % of baseExpand),
+    // while the slow drift still causes spacing variation each cycle.
+    const env = 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(
+      st.t * st.rings[i].ampModFreq + st.rings[i].ampModPhase,
+    ));
+    return base * (1 + breathSignal * baseExpand * env);
+  }) as [number, number, number];
 
   // ── Breathing / state math ────────────────────────────────────────────────
 
-  const coreBaseR = maxR * 0.285;
+  const coreBaseR = maxR * 0.285 * st.coreScale;
   let coreR = coreBaseR;
   let glowIntensity = 0;
   let jitterX = 0;
@@ -355,17 +412,18 @@ function draw(
     const d = st.depthParam; // 0..1 — encodes both progress and session weight
     // Frequency: ~9.7 s period at d=0 → ~20.9 s at d=1 (starts present, deepens)
     const freqMs = 0.00065 - d * 0.00035;
-    // Amplitude: 12% of core radius at d=0 → 28% at d=1
-    const ampFrac = 0.12 + d * 0.16;
+    // Amplitude: 20% of core radius at d=0 → 44% at d=1
+    const ampFrac = 0.20 + d * 0.24;
     const breathVal = Math.sin(st.t * freqMs);
     coreR = coreBaseR + breathVal * (coreBaseR * ampFrac);
-    // Glow floods out on exhale, scales with depth
-    const exhale = Math.max(0, breathVal);
-    glowIntensity = exhale * (0.45 + d * 0.55);
+    // Glow stays alive across the full breath cycle — never drops to zero.
+    // Maps [-1,1] → [0.18, 1.0] so exhale is dim but continuous, not a flash.
+    const glowEnv = 0.18 + 0.82 * (0.5 + 0.5 * breathVal);
+    glowIntensity = glowEnv * (0.36 + d * 0.44);
   } else if (st.status === "idle") {
     const breathVal = Math.sin(st.t * 0.000175);
     coreR = coreBaseR * (1 + breathVal * 0.028);
-    glowIntensity = Math.max(0, breathVal) * 0.055;
+    glowIntensity = 0.018 + 0.022 * (0.5 + 0.5 * breathVal);
   } else if (st.status === "paused") {
     // Frozen breath + irregular positional jitter
     const jt = st.jitterT;
@@ -385,6 +443,14 @@ function draw(
   }
 
   const rga = glowIntensity * 0.82; // ring glow alpha (slightly attenuated)
+
+  // ── Lissajous centre drift ─────────────────────────────────────────────────
+  // Two irrational frequencies on X/Y produce a path that never exactly repeats.
+  // Active only while running or finished so idle/paused remain visually calm.
+  const driftActive = st.status === "running" || st.status === "finished";
+  const driftAmt    = driftActive ? maxR * 0.030 : 0;
+  const lissX = driftAmt * Math.sin(st.t * 0.00031);
+  const lissY = driftAmt * Math.cos(st.t * 0.00023);
 
   // ── Paint layers back → front ─────────────────────────────────────────────
 
@@ -406,11 +472,11 @@ function draw(
     rgba(K.IRON_RIM, 0.4 + rga * 0.32), K.GOLD, rga * 0.88,
   );
 
-  // 3. Particles
-  drawParticles(ctx, cx, cy, st.particles, st.t, st.status, glowIntensity);
+  // 3. Particles — orbit radii breathe with the core, but ~65 % of ring amplitude
+  drawParticles(ctx, cx, cy, st.particles, st.t, st.status, glowIntensity, breathSignal, baseExpand * 0.65);
 
-  // 4. Core orb (with paused positional jitter)
-  drawCore(ctx, cx + jitterX, cy + jitterY, coreR, glowIntensity, st.status, st.t);
+  // 4. Core orb — paused jitter + Lissajous drift
+  drawCore(ctx, cx + jitterX + lissX, cy + jitterY + lissY, coreR, glowIntensity, st.status, st.t);
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -487,6 +553,7 @@ export const LivingCore: FC<LivingCoreProps> = ({
       jitterT: 0,
       burstT: 0,
       prevStatus: "idle",
+      coreScale: 0.72,
     };
 
     const ro = new ResizeObserver(applySize);
@@ -544,6 +611,14 @@ export const LivingCore: FC<LivingCoreProps> = ({
       if (newStatus === "finished") {
         st.burstT = Math.min(st.burstT + dt, 2000);
       }
+
+      // Global scale: idle stays compact (0.72), expands to full (1.0) on start.
+      // Slightly faster lerp on expand (snappy bloom) than on collapse (gentle shrink).
+      const scaleTarget = newStatus === "idle" ? 0.72 : 1.0;
+      const scaleLerp = newStatus === "idle"
+        ? Math.min(dt * 0.0018, 1)   // ~560 ms to reach idle compact
+        : Math.min(dt * 0.0030, 1);  // ~330 ms bloom on start
+      st.coreScale = lerp(st.coreScale, scaleTarget, scaleLerp);
 
       // Ring rotation
       const ringSpeed =

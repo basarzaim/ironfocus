@@ -27,6 +27,15 @@ interface FluidParticle {
   rgb: readonly [number, number, number];
 }
 
+interface CloudParticle {
+  angle: number;
+  radiusFrac: number;   // fraction of maxR, range: CLOUD_R_MIN – CLOUD_R_MAX
+  angularSpeed: number; // rad/ms, signed — mixed CW/CCW for static-halo feel
+  wobblePhase: number;
+  size: number;
+  baseAlpha: number;
+}
+
 interface FluidState {
   t: number;
   status: CoreStatus;
@@ -36,8 +45,17 @@ interface FluidState {
   targetSpeed: number;
   currentBlur: number;
   targetBlur: number;
+  /** 0 = breathing fully inactive, 1 = fully active. Lerped on state transition
+   *  so the breath fades in/out smoothly instead of snapping. */
+  breathAmt: number;
+  /** Overall scale multiplier applied to all radii.
+   *  Starts at 0.60 (compact idle), bursts to 1.12 on start, settles to 1.0. */
+  currentScale: number;
+  /** Countdown timer (ms) for the burst overshoot phase after idle → running. */
+  burstT: number;
   jitterT: number;
   particles: FluidParticle[];
+  cloud: CloudParticle[];
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -49,6 +67,14 @@ const SPEED_INNER = 0.00045;
 const SPEED_OUTER = 0.000126;
 
 const PARTICLE_COUNT = 280;
+
+// ── Gas-cloud halo constants ────────────────────────────────────────────────
+/** Number of cloud wisps. Low count — motion-blur accumulation does the blending. */
+const CLOUD_COUNT = 42;
+/** Innermost cloud orbit — just outside the timer text boundary. */
+const CLOUD_R_MIN = 0.06;
+/** Outermost cloud orbit — slightly inside the first particle band. */
+const CLOUD_R_MAX = 0.15;
 
 /** Inner bound of the particle field (fraction of maxR). Center is kept clear for text. */
 const R_MIN = 0.12;
@@ -148,8 +174,9 @@ function mkParticle(i: number): FluidParticle {
   const gauss = Math.exp(-Math.pow((n - peakN) / spread, 2));
   const baseAlpha = (0.05 + 0.10 * gauss) * (0.55 + Math.random() * 0.45);
 
-  // Organic wobble: inner more ordered, outer more chaotic
-  const wobbleAmp = lerp(0.025, 0.065, n);
+  // B: Inner turbulence base — inner particles now have larger base wobble amplitude.
+  // The faster turbulence layer is added per-frame in drawFrame.
+  const wobbleAmp = lerp(0.085, 0.042, n); // inner: 0.085, outer: 0.042
 
   return {
     angle: (i / PARTICLE_COUNT) * Math.PI * 2 + Math.random() * Math.PI * 0.35,
@@ -167,6 +194,35 @@ function mkParticles(): FluidParticle[] {
   return Array.from({ length: PARTICLE_COUNT }, (_, i) => mkParticle(i));
 }
 
+// ── Cloud-halo factory ─────────────────────────────────────────────────────
+
+/**
+ * Creates a single gas-cloud wisp orbiting very close to the core centre.
+ *
+ * Key design choices for the "static halo" feel:
+ *  - Mixed CW / CCW directions so net rotation is near-zero visually.
+ *  - Very slow speed (0.0003 – 0.0008 rad/ms, independent of currentSpeed).
+ *  - Very low alpha; motion-blur accumulation blends them into a soft ring.
+ *  - Slightly larger dots (2.5–5 px) for a diffuse, gaseous appearance.
+ */
+function mkCloudParticle(i: number): CloudParticle {
+  const radiusFrac = CLOUD_R_MIN + (CLOUD_R_MAX - CLOUD_R_MIN) * Math.random();
+  // Slow drift; alternating direction by index keeps the cloud visually static
+  const speed = (0.00030 + Math.random() * 0.00050) * (i % 2 === 0 ? 1 : -1);
+  return {
+    angle:       (i / CLOUD_COUNT) * Math.PI * 2 + Math.random() * 0.4,
+    radiusFrac,
+    angularSpeed: speed,
+    wobblePhase:  Math.random() * Math.PI * 2,
+    size:         3.5 + Math.random() * 3.5,
+    baseAlpha:    0.10 + Math.random() * 0.10, // 0.10 – 0.20
+  };
+}
+
+function mkCloud(): CloudParticle[] {
+  return Array.from({ length: CLOUD_COUNT }, (_, i) => mkCloudParticle(i));
+}
+
 function mkState(): FluidState {
   return {
     t: 0,
@@ -177,8 +233,12 @@ function mkState(): FluidState {
     targetSpeed: 0.04,
     currentBlur: 0.14,
     targetBlur: 0.14,
+    breathAmt: 0,
+    currentScale: 0.38,
+    burstT: 0,
     jitterT: 0,
     particles: mkParticles(),
+    cloud: mkCloud(),
   };
 }
 
@@ -194,6 +254,14 @@ function drawFrame(
   const cy = h / 2;
   const maxR = Math.min(w, h) / 2;
   const d = st.depthParam;
+
+  // A: Lissajous-drifting glow centre — two irrational frequencies produce a path
+  // that never exactly repeats, so the core always looks organically off-centre.
+  // Drift is active only while the session is running or just finished.
+  const driftActive = st.status === "running" || st.status === "finished";
+  const driftAmt = driftActive ? maxR * 0.044 : 0;
+  const glowCx = cx + driftAmt * Math.sin(st.t * 0.00031);
+  const glowCy = cy + driftAmt * Math.cos(st.t * 0.00023);
 
   // ── Motion-blur fill ──────────────────────────────────────────────────────────
   // The core trick: semi-opaque black each frame instead of clearRect.
@@ -212,7 +280,8 @@ function drawFrame(
   if (st.status === "running") {
     alphaScale = 0.75 + d * 0.25;
   } else if (st.status === "idle") {
-    alphaScale = 0.18;
+    // Visible enough to clearly show the compact state before start.
+    alphaScale = 0.42;
   } else if (st.status === "paused") {
     alphaScale = 0.40;
   } else {
@@ -224,16 +293,61 @@ function drawFrame(
   // Sits behind everything, grows softly as depthParam increases.
   // Creates the sense that the timer "charges up" over the session.
   if (alphaScale > 0.06) {
-    const glowR = maxR * (0.15 + d * 0.18);
-    const glowA = (0.032 + d * 0.072) * alphaScale;
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR);
+    // ── Breathing ─────────────────────────────────────────────────────────────
+    // breathPhase ∈ [0, 1]: 0 = full exhale, 1 = full inhale.
+    // Wave is (1 + sin) / 2 so it NEVER goes negative — no sudden dark cuts.
+    // Blended with 0.5 (neutral) via breathAmt so it fades in/out on state change.
+    const breathFreq  = lerp(0.000898, 0.000654, d); // ~7 s → ~9.6 s per breath
+    const rawBreath   = (1.0 + Math.sin(st.t * breathFreq)) / 2; // [0, 1]
+    const breathPhase = lerp(0.5, rawBreath, st.breathAmt);
+    // breathPhase = 0.5 when inactive (neutral, no modulation)
+
+    // Glow radius expands on inhale, contracts on exhale.
+    // Range: 78 %–122 % of base radius (neutral = 100 %).
+    // Also scaled by currentScale for the idle-compact / burst animation.
+    const glowBaseR = maxR * (0.15 + d * 0.18) * st.currentScale;
+    const glowR     = glowBaseR * (0.78 + 0.44 * breathPhase);
+
+    // Glow alpha brightens on inhale, dims (but never vanishes) on exhale.
+    // Range: 55 %–145 % of base alpha (neutral = 100 %).
+    const glowA = (0.032 + d * 0.072) * alphaScale * (0.55 + 0.90 * breathPhase);
+    // A: gradient centred on the drifting point — makes the light source feel alive
+    const g = ctx.createRadialGradient(glowCx, glowCy, 0, glowCx, glowCy, glowR);
     g.addColorStop(0,   rgba(255, 200, 80, glowA));
     g.addColorStop(0.5, rgba(220, 148, 50, glowA * 0.32));
     g.addColorStop(1,   rgba(200, 128, 40, 0));
     ctx.beginPath();
-    ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+    ctx.arc(glowCx, glowCy, glowR, 0, Math.PI * 2);
     ctx.fillStyle = g;
     ctx.fill();
+  }
+
+  // ── Gas-cloud halo ────────────────────────────────────────────────────────────
+  // Soft wisps orbiting very close to centre, well inside the first particle band.
+  // Mixed CW/CCW directions make the cloud appear nearly stationary — a persistent
+  // ambient glow rather than a spinning ring.
+  {
+    const cloudAlpha =
+      st.status === "running"  ? 1.00 :
+      st.status === "finished" ? 0.90 :
+      st.status === "paused"   ? 0.65 :
+      0.35; // idle: faintly visible
+
+    if (cloudAlpha > 0.05) {
+      for (const cp of st.cloud) {
+        const wobble = 1 + 0.06 * Math.sin(st.t * 0.0011 + cp.wobblePhase);
+        const r  = cp.radiusFrac * maxR * wobble * st.currentScale;
+        const px = cx + r * Math.cos(cp.angle);
+        const py = cy + r * Math.sin(cp.angle);
+        const a  = cp.baseAlpha * cloudAlpha;
+        if (a < 0.004) continue;
+        ctx.beginPath();
+        ctx.arc(px, py, cp.size, 0, Math.PI * 2);
+        // Warm amber tint — slightly more orange than the outer particles
+        ctx.fillStyle = rgba(255, 172, 55, a);
+        ctx.fill();
+      }
+    }
   }
 
   // ── Archimedean spiral skeleton ───────────────────────────────────────────────
@@ -243,8 +357,8 @@ function drawFrame(
     const spiralAlpha = 0.015 * alphaScale;
     if (spiralAlpha > 0.003) {
       const turns = Math.PI * 5;
-      const rMin = maxR * R_MIN * scaleFrac;
-      const rMax = maxR * 0.66 * scaleFrac;
+      const rMin = maxR * R_MIN * scaleFrac * st.currentScale;
+      const rMax = maxR * 0.66 * scaleFrac * st.currentScale;
       const steps = 100;
       // Spiral rotates with the innermost particles — looks anchored
       const baseAngle =
@@ -270,12 +384,23 @@ function drawFrame(
 
   // ── Particle field ────────────────────────────────────────────────────────────
   for (const p of st.particles) {
-    // Organic radius wobble (inner = tight, outer = loose)
-    const wobbleR = 1 + p.wobbleAmp * Math.sin(st.t * 0.00085 + p.wobblePhase);
-    // Slight angular micro-drift keeps it from looking perfectly circular
-    const wobbleA = 0.032 * Math.sin(st.t * 0.00062 + p.wobblePhase * 1.4);
+    // Normalised radial position: 0 = innermost, 1 = outermost
+    const n = (p.radiusFrac - R_MIN) / (R_MAX - R_MIN);
 
-    const radius = p.radiusFrac * maxR * scaleFrac * wobbleR;
+    // Slow base wobble (all particles)
+    const baseWobbleR = p.wobbleAmp * Math.sin(st.t * 0.00085 + p.wobblePhase);
+    const baseWobbleA = 0.032 * Math.sin(st.t * 0.00062 + p.wobblePhase * 1.4);
+
+    // B: Inner turbulence — a second, faster oscillation layered on top.
+    // Fades out completely at n ≥ 0.42 so only the inner ~40 % of the field is affected.
+    const innerFrac = Math.max(0, 1 - n / 0.42);
+    const turbR = innerFrac * 0.09 * Math.sin(st.t * 0.0022 + p.wobblePhase * 3.7);
+    const turbA = innerFrac * 0.075 * Math.cos(st.t * 0.0018 + p.wobblePhase * 2.4);
+
+    const wobbleR = 1 + baseWobbleR + turbR;
+    const wobbleA = baseWobbleA + turbA;
+
+    const radius = p.radiusFrac * maxR * scaleFrac * st.currentScale * wobbleR;
     const angle = p.angle + wobbleA;
 
     let px = cx + radius * Math.cos(angle);
@@ -390,12 +515,35 @@ export const FluidCore: FC<FluidCoreProps> = ({
         0.0;
 
       st.targetBlur =
-        newStatus === "idle"    ? 0.14 :
+        newStatus === "idle"    ? 0.08 : // slower clearing so compact state stays visible
         newStatus === "running" ? 0.07 :
         0.10;
 
       st.currentSpeed = lerp(st.currentSpeed, st.targetSpeed, Math.min(dt * 0.0018, 1));
       st.currentBlur  = lerp(st.currentBlur,  st.targetBlur,  Math.min(dt * 0.002,  1));
+
+      // ── Scale animation ──────────────────────────────────────────────────────
+      // idle → running transition: fire the burst overshoot.
+      if (st.prevStatus === "idle" && st.status === "running") {
+        st.burstT = 480; // ms: how long the overshoot target is held
+      }
+      if (st.burstT > 0) st.burstT -= dt;
+
+      const scaleTarget =
+        st.status === "idle"   ? 0.38 : // tight compact rings close to centre
+        st.status === "paused" ? 0.92 :
+        st.burstT > 0          ? 1.22 : // burst overshoot — clearly larger than idle
+        1.0;                             // normal running / finished
+
+      // Three lerp rates:
+      //  - burst  : very fast (~60 ms) to create a snappy "bloom" pop
+      //  - idle   : moderate (~900 ms) so compact state is reached quickly after stopping
+      //  - settle : slow (~700 ms) for a smooth post-burst landing
+      const scaleLerp =
+        st.burstT > 0          ? Math.min(dt * 0.010, 1) :
+        st.status === "idle"   ? Math.min(dt * 0.004, 1) :
+        Math.min(dt * 0.0020, 1);
+      st.currentScale = lerp(st.currentScale, scaleTarget, scaleLerp);
 
       if (newStatus === "paused") {
         st.jitterT += dt;
@@ -403,7 +551,21 @@ export const FluidCore: FC<FluidCoreProps> = ({
         st.jitterT = 0;
       }
 
-      // Advance each particle individually (differential rotation)
+      // breathAmt lerps to 1 when running, back to 0 otherwise.
+      // This drives the glow breathing in drawFrame with a smooth fade-in/out.
+      st.breathAmt = lerp(
+        st.breathAmt,
+        newStatus === "running" ? 1.0 : 0.0,
+        Math.min(dt * 0.0015, 1),
+      );
+
+      // Cloud halo: advances at its own fixed slow speed, independent of currentSpeed.
+      for (const cp of st.cloud) {
+        cp.angle += cp.angularSpeed * dt;
+      }
+
+      // Advance each particle individually (differential rotation — no breathing
+      // modulation on speed; breathing is expressed through the glow only).
       for (const p of st.particles) {
         p.angle += p.angularSpeed * dt * st.currentSpeed;
       }

@@ -907,7 +907,7 @@ export function TimerPanel({
             elapsedSeconds={timer.elapsedSeconds}
             targetSeconds={timer.targetSeconds}
             displayTime={displayLabel}
-            className="h-[21rem] w-[21rem] md:h-[25.5rem] md:w-[25.5rem]"
+            className="aspect-square w-full max-w-[22rem] sm:max-w-[26rem] md:max-w-[30rem]"
           />
 
           <div

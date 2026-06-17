@@ -389,7 +389,10 @@ function draw(
     st.status === "paused"   ? 0.018 :
     0.06;                              // idle
 
-  const baseRadii = [maxR * 0.91 * st.coreScale, maxR * 0.75 * st.coreScale, maxR * 0.60 * st.coreScale] as const;
+  // Base fractions chosen so that at maximum expansion (baseExpand=0.26, env=1.0)
+  // the outer ring reaches ≈0.97 × maxR — filling the canvas without clipping.
+  //   outerFrac × (1 + 0.26) = 0.97  →  outerFrac ≈ 0.77
+  const baseRadii = [maxR * 0.77 * st.coreScale, maxR * 0.635 * st.coreScale, maxR * 0.51 * st.coreScale] as const;
   const [rOuter, rMid, rInner] = baseRadii.map((base, i) => {
     // Amplitude envelope per ring: range [0.65, 1.0].
     // Floor at 0.65 ensures every ring always breathes visibly (≥65 % of baseExpand),
@@ -402,7 +405,7 @@ function draw(
 
   // ── Breathing / state math ────────────────────────────────────────────────
 
-  const coreBaseR = maxR * 0.285 * st.coreScale;
+  const coreBaseR = maxR * 0.235 * st.coreScale;
   let coreR = coreBaseR;
   let glowIntensity = 0;
   let jitterX = 0;

@@ -12,6 +12,10 @@ export interface LivingCoreProps {
   displayTime: string;
   /** Tailwind classes for the wrapper. Controls visual size. */
   className?: string;
+  /** Full-bleed ambient layer: soft edge fade, no circular clip, grows with session depth. */
+  ambient?: boolean;
+  /** When false, timer digits are omitted (parent renders them in the UI stack). */
+  showTimer?: boolean;
 }
 
 // ── Internal types ─────────────────────────────────────────────────────────────
@@ -48,8 +52,15 @@ interface CanvasState {
   jitterT: number;
   burstT: number;
   prevStatus: CoreStatus;
-  /** Lerped global scale: idle → 0.72 (compact), running → 1.0. */
+  /** Lerped global scale for the core orb: idle → 0.20, running → 1.0. */
   coreScale: number;
+  /** Lerped scale applied only to rings + particle orbits.
+   *  idle → 0.12 (rings hug the core), bursts to 1.08 on start, settles to 1.0. */
+  ringScale: number;
+  /** Countdown (ms) for the ring burst overshoot phase after idle → running. */
+  ringBurstT: number;
+  /** Countdown (ms) for the finish explosion (running/paused → finished). */
+  finishBurstT: number;
 }
 
 // ── Palette (dark iron / bronze / molten gold) ─────────────────────────────────
@@ -313,29 +324,45 @@ function drawParticles(
   glowIntensity: number,
   breathSignal: number,
   orbitExpand: number,
+  ringScale: number,
+  ringBurstFrac: number,    // 1→0 during start burst
+  finishBurstFrac: number,  // 1→0 during finish explosion
 ) {
   const speedMult =
     status === "running" ? 1.6 : status === "idle" ? 0.28 : 0.04;
 
-  // On inhale, particle count feels higher: alpha surges up to 1.5×,
-  // revealing dim particles that sit below the normal visibility threshold.
+  // Start burst: quadratic decay, particles spray outward fast then settle.
+  const scatterFrac = ringBurstFrac * ringBurstFrac;
+  // Finish explosion: cubic decay — concentrated snap, fades fast.
+  const finishScatterFrac = finishBurstFrac * finishBurstFrac * finishBurstFrac;
+
+  // Alpha surges: start burst up to 7×, finish explosion up to 12×.
+  const burstAlphaBoost = 1.0 + scatterFrac * 6.0 + finishScatterFrac * 11.0;
+
+  // On inhale, alpha surges up to 1.5×, revealing dim particles.
   const inhaleBoost = status === "running"
-    ? 0.48 + 1.02 * (0.5 + 0.5 * breathSignal)  // [0.48, 1.50]: exhale dims, inhale brightens
+    ? 0.48 + 1.02 * (0.5 + 0.5 * breathSignal)  // [0.48, 1.50]
     : 1.0;
   const alphaMult =
-    (status === "running" ? 1.0 : status === "idle" ? 0.28 : 0.1) * inhaleBoost;
+    (status === "running" ? 1.0 : status === "idle" ? 0.28 : 0.1) * inhaleBoost * burstAlphaBoost;
 
   for (const p of particles) {
     const angle = p.angle + p.speed * t * speedMult;
     const shimmer = 0.68 + 0.32 * Math.sin(t * 0.0019 + p.phase);
     const a = p.baseAlpha * alphaMult * shimmer;
-    if (a < 0.007) continue;  // lower cutoff so more particles surface on inhale
+    // Lower visibility cutoff during burst so dim particles also surface.
+    const cutoff = scatterFrac > 0.05 ? 0.002 : 0.007;
+    if (a < cutoff) continue;
 
-    // Per-particle amplitude envelope: slow sinusoid seeded from existing phase.
-    // Range [0.28, 1.0] — each particle responds differently to the shared breath,
-    // so relative orbital spacings shift each cycle without losing coherence.
+    // Per-particle amplitude envelope for breathing (slow, range [0.28, 1.0]).
     const particleEnv = 0.28 + 0.72 * (0.5 + 0.5 * Math.sin(t * 0.000095 + p.phase * 2.3));
-    const effectiveOrbitR = p.orbitR * (1 + breathSignal * orbitExpand * particleEnv);
+    // Per-particle scatter distance: varies so particles fly to different radii.
+    // Start scatter (fast) + finish scatter (slow, larger range)
+    const perParticleVar = 0.3 + 0.7 * Math.abs(Math.sin(p.phase * 2.7));
+    const particleScatter =
+      scatterFrac       * 1.4 * perParticleVar +
+      finishScatterFrac * 4.2 * perParticleVar;
+    const effectiveOrbitR = p.orbitR * (ringScale * (1 + breathSignal * orbitExpand * particleEnv) + particleScatter);
 
     const x = cx + effectiveOrbitR * Math.cos(angle);
     const y = cy + effectiveOrbitR * Math.sin(angle);
@@ -354,6 +381,64 @@ function drawParticles(
   }
 }
 
+// ── Fragment shards ────────────────────────────────────────────────────────────
+
+/**
+ * Draws glowing core shards that fly outward during the finish explosion.
+ * Each shard is a small gold orb that starts at the core position and
+ * travels radially outward, shrinking and fading as finishBurstFrac → 0.
+ */
+function drawFragmentShards(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  coreBaseR: number,
+  maxR: number,
+  finishBurstFrac: number,
+): void {
+  if (finishBurstFrac < 0.02) return;
+
+  const COUNT = 16;
+  // Travel distance: 0 at burst start → maxR×0.82 as burst fades (flies much further)
+  const travel = (1 - finishBurstFrac) * maxR * 0.82;
+  // Shard radius: starts larger (~45% of core), shrinks to nothing
+  const shardR = coreBaseR * 0.48 * finishBurstFrac;
+  // Alpha: blindingly bright at start, fades fast
+  const shardAlpha = finishBurstFrac * finishBurstFrac * (0.75 + 0.25 * finishBurstFrac);
+
+  for (let i = 0; i < COUNT; i++) {
+    // Evenly spaced angles with a golden-ratio offset for irregular feel
+    const angle = (i / COUNT) * Math.PI * 2 + (i % 3) * 0.41;
+    // Per-shard distance variation via golden ratio sequence
+    const distMult = 0.55 + 0.45 * ((i * 0.6180339) % 1.0);
+    const dist = travel * distMult;
+    const x = cx + dist * Math.cos(angle);
+    const y = cy + dist * Math.sin(angle);
+
+    if (shardR < 0.5) continue;
+
+    const g = ctx.createRadialGradient(
+      x - shardR * 0.22, y - shardR * 0.22, 0,
+      x, y, shardR,
+    );
+    g.addColorStop(0,   rgba(K.WARM_WHITE, shardAlpha * 0.90));
+    g.addColorStop(0.35, rgba(K.GOLD_BRT,  shardAlpha * 0.75));
+    g.addColorStop(1,   rgba(K.GOLD,       0));
+
+    ctx.save();
+    if (shardAlpha > 0.08) {
+      ctx.shadowColor = K.GOLD_BRT;
+      ctx.shadowBlur = 18 * shardAlpha;
+    }
+    ctx.beginPath();
+    ctx.arc(x, y, shardR, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+}
+
 // ── Master draw function ───────────────────────────────────────────────────────
 
 function draw(
@@ -361,6 +446,7 @@ function draw(
   cssW: number,
   cssH: number,
   st: CanvasState,
+  ambient: boolean,
 ) {
   const cx = cssW / 2;
   const cy = cssH / 2;
@@ -384,7 +470,7 @@ function draw(
   const breathSignal = Math.sin(st.t * breathFreqRings); // −1 = exhale, +1 = inhale
 
   const baseExpand =
-    st.status === "running"  ? 0.16 + st.depthParam * 0.10 :
+    st.status === "running"  ? 0.11 + st.depthParam * 0.09 :
     st.status === "finished" ? 0.10 :
     st.status === "paused"   ? 0.018 :
     0.06;                              // idle
@@ -392,7 +478,11 @@ function draw(
   // Base fractions chosen so that at maximum expansion (baseExpand=0.26, env=1.0)
   // the outer ring reaches ≈0.97 × maxR — filling the canvas without clipping.
   //   outerFrac × (1 + 0.26) = 0.97  →  outerFrac ≈ 0.77
-  const baseRadii = [maxR * 0.77 * st.coreScale, maxR * 0.635 * st.coreScale, maxR * 0.51 * st.coreScale] as const;
+  // Finish explosion: cubic decay over 1400 ms — aggressive shockwave.
+  const finishBurstFrac = Math.max(0, st.finishBurstT / 1400);
+  const finishRingBoost = finishBurstFrac * finishBurstFrac * 1.30; // [0, +130%] at peak
+  const effectiveRingScale = st.ringScale * (1 + finishRingBoost);
+  const baseRadii = [maxR * 0.77 * effectiveRingScale, maxR * 0.635 * effectiveRingScale, maxR * 0.51 * effectiveRingScale] as const;
   const [rOuter, rMid, rInner] = baseRadii.map((base, i) => {
     // Amplitude envelope per ring: range [0.65, 1.0].
     // Floor at 0.65 ensures every ring always breathes visibly (≥65 % of baseExpand),
@@ -415,8 +505,8 @@ function draw(
     const d = st.depthParam; // 0..1 — encodes both progress and session weight
     // Frequency: ~9.7 s period at d=0 → ~20.9 s at d=1 (starts present, deepens)
     const freqMs = 0.00065 - d * 0.00035;
-    // Amplitude: 20% of core radius at d=0 → 44% at d=1
-    const ampFrac = 0.20 + d * 0.24;
+    // Amplitude: 14% of core radius at d=0 → 38% at d=1
+    const ampFrac = 0.14 + d * 0.24;
     const breathVal = Math.sin(st.t * freqMs);
     coreR = coreBaseR + breathVal * (coreBaseR * ampFrac);
     // Glow stays alive across the full breath cycle — never drops to zero.
@@ -435,7 +525,7 @@ function draw(
     jitterY = Math.cos(jt * 0.0182) * Math.sin(jt * 0.0097) * jAmt;
     glowIntensity = 0.13 + 0.04 * Math.sin(jt * 0.003);
   } else {
-    // finished: burst then settle into slow pulse
+    // finished: settle into slow pulse
     const burstFade = Math.max(0, 1 - st.burstT / 1800);
     const pulse = 0.58 + 0.38 * Math.sin(st.t * 0.00185);
     glowIntensity = pulse * 0.68 + burstFade * 0.3;
@@ -445,12 +535,21 @@ function draw(
       Math.sin(st.t * 0.00185) * coreBaseR * 0.038;
   }
 
+  // ── Finish burst flash — applied universally after the status block ────────────
+  // This ensures the explosion is visible whether the trigger was a natural
+  // completion (→ finished), a reset, or a log save (→ idle).
+  if (finishBurstFrac > 0) {
+    const flash = finishBurstFrac * finishBurstFrac * finishBurstFrac; // cubic — sharp snap
+    glowIntensity = Math.min(1.8, glowIntensity + flash * 2.8);
+    coreR += flash * coreBaseR * 0.70;
+  }
+
   const rga = glowIntensity * 0.82; // ring glow alpha (slightly attenuated)
 
   // ── Lissajous centre drift ─────────────────────────────────────────────────
   // Two irrational frequencies on X/Y produce a path that never exactly repeats.
   // Active only while running or finished so idle/paused remain visually calm.
-  const driftActive = st.status === "running" || st.status === "finished";
+  const driftActive = st.status === "running" || st.status === "finished" || finishBurstFrac > 0.05;
   const driftAmt    = driftActive ? maxR * 0.030 : 0;
   const lissX = driftAmt * Math.sin(st.t * 0.00031);
   const lissY = driftAmt * Math.cos(st.t * 0.00023);
@@ -475,11 +574,31 @@ function draw(
     rgba(K.IRON_RIM, 0.4 + rga * 0.32), K.GOLD, rga * 0.88,
   );
 
-  // 3. Particles — orbit radii breathe with the core, but ~65 % of ring amplitude
-  drawParticles(ctx, cx, cy, st.particles, st.t, st.status, glowIntensity, breathSignal, baseExpand * 0.65);
+  // 3. Particles — orbit radii scale with rings and breathe at 65 % of ring amplitude.
+  // ringBurstFrac (1→0 during burst) drives scatter + alpha surge.
+  const ringBurstFrac = Math.max(0, st.ringBurstT / 520);
+  drawParticles(ctx, cx, cy, st.particles, st.t, st.status, glowIntensity, breathSignal, baseExpand * 0.65, st.ringScale, ringBurstFrac, finishBurstFrac);
 
   // 4. Core orb — paused jitter + Lissajous drift
   drawCore(ctx, cx + jitterX + lissX, cy + jitterY + lissY, coreR, glowIntensity, st.status, st.t);
+
+  // 5. Fragment shards — fly outward from core during finish explosion
+  if (finishBurstFrac > 0.02) {
+    drawFragmentShards(ctx, cx + lissX, cy + lissY, coreBaseR, maxR, finishBurstFrac);
+  }
+
+  // Ambient mode: very soft edge fade so bursts don't show a hard square canvas edge.
+  if (ambient) {
+    const outerR = Math.hypot(cx, cy) * 1.02;
+    const vg = ctx.createRadialGradient(cx, cy, maxR * 0.94, cx, cy, outerR);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(0.96, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(0,0,0,1)");
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, cssW, cssH);
+    ctx.globalCompositeOperation = "source-over";
+  }
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -490,15 +609,17 @@ export const LivingCore: FC<LivingCoreProps> = ({
   elapsedSeconds,
   targetSeconds,
   displayTime,
-  className = "h-72 w-72",
+  className = "relative h-72 w-72",
+  ambient = false,
+  showTimer = true,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Live props ref: read inside RAF loop to avoid stale closure
-  const propsRef = useRef({ mode, isRunning, elapsedSeconds, targetSeconds });
+  const propsRef = useRef({ mode, isRunning, elapsedSeconds, targetSeconds, ambient });
   useEffect(() => {
-    propsRef.current = { mode, isRunning, elapsedSeconds, targetSeconds };
+    propsRef.current = { mode, isRunning, elapsedSeconds, targetSeconds, ambient };
   });
 
   // Mutable animation state lives outside React to avoid re-renders
@@ -531,9 +652,9 @@ export const LivingCore: FC<LivingCoreProps> = ({
     const anim = animRef.current;
 
     function applySize() {
-      const rect = wrapper!.getBoundingClientRect();
-      const size = Math.max(rect.width || 288, rect.height || 288);
+      const el = wrapper!;
       const dpr = window.devicePixelRatio || 1;
+      const size = Math.max(el.offsetWidth, el.offsetHeight, 1);
       canvas!.width = size * dpr;
       canvas!.height = size * dpr;
       anim.cssW = size;
@@ -556,7 +677,10 @@ export const LivingCore: FC<LivingCoreProps> = ({
       jitterT: 0,
       burstT: 0,
       prevStatus: "idle",
-      coreScale: 0.72,
+      coreScale: 0.20,
+      ringScale: 0.12,
+      ringBurstT: 0,
+      finishBurstT: 0,
     };
 
     const ro = new ResizeObserver(applySize);
@@ -615,13 +739,48 @@ export const LivingCore: FC<LivingCoreProps> = ({
         st.burstT = Math.min(st.burstT + dt, 2000);
       }
 
-      // Global scale: idle stays compact (0.72), expands to full (1.0) on start.
-      // Slightly faster lerp on expand (snappy bloom) than on collapse (gentle shrink).
-      const scaleTarget = newStatus === "idle" ? 0.72 : 1.0;
+      // Core orb scale: compact in idle, blooms on start, grows with session depth.
+      const depthGrowth = newStatus === "running" ? st.depthParam : 0;
+      const scaleTarget = newStatus === "idle" ? 0.20 : 0.84 + depthGrowth * 0.38;
       const scaleLerp = newStatus === "idle"
-        ? Math.min(dt * 0.0018, 1)   // ~560 ms to reach idle compact
-        : Math.min(dt * 0.0030, 1);  // ~330 ms bloom on start
+        ? Math.min(dt * 0.0018, 1)
+        : Math.min(dt * 0.0030, 1);
       st.coreScale = lerp(st.coreScale, scaleTarget, scaleLerp);
+
+      // Finish explosion fires on:
+      //   1. Natural completion   (→ finished)
+      //   2. Reset / log save     (running | paused | finished → idle)
+      if (st.prevStatus !== "finished" && st.status === "finished") {
+        st.finishBurstT = 1400;
+      }
+      if (
+        st.status === "idle" &&
+        (st.prevStatus === "running" ||
+          st.prevStatus === "paused" ||
+          st.prevStatus === "finished")
+      ) {
+        st.finishBurstT = 1400;
+      }
+      if (st.finishBurstT > 0) st.finishBurstT -= dt;
+
+      // Ring burst: idle → running fires an outward bloom.
+      // Rings open from their huddled 0.35 position to 1.08 (gentle overshoot), settle to 1.0.
+      if (st.prevStatus === "idle" && st.status === "running") {
+        st.ringBurstT = 520; // ms the overshoot target is held
+      }
+      if (st.ringBurstT > 0) st.ringBurstT -= dt;
+
+      const depthRingGrowth = st.status === "running" ? st.depthParam * 0.40 : 0;
+      const ringScaleTarget =
+        st.status === "idle"    ? 0.12 :   // huddled against the core
+        st.ringBurstT > 0       ? 0.94 :   // gentle overshoot
+        0.88 + depthRingGrowth;
+
+      const ringLerp =
+        st.ringBurstT > 0    ? Math.min(dt * 0.011, 1) :  // ~90 ms — firm but not jarring
+        st.status === "idle" ? Math.min(dt * 0.003, 1)  :  // ~333 ms collapse
+        Math.min(dt * 0.005, 1);                           // ~200 ms settle
+      st.ringScale = lerp(st.ringScale, ringScaleTarget, ringLerp);
 
       // Ring rotation
       const ringSpeed =
@@ -637,7 +796,7 @@ export const LivingCore: FC<LivingCoreProps> = ({
       // Draw frame
       ctx.setTransform(anim.dpr, 0, 0, anim.dpr, 0, 0);
       ctx.clearRect(0, 0, anim.cssW, anim.cssH);
-      draw(ctx, anim.cssW, anim.cssH, st);
+      draw(ctx, anim.cssW, anim.cssH, st, propsRef.current.ambient);
 
       anim.raf = requestAnimationFrame(frame);
     }
@@ -655,22 +814,23 @@ export const LivingCore: FC<LivingCoreProps> = ({
   }, []); // intentionally empty – all live data flows through propsRef
 
   return (
-    <div ref={wrapperRef} className={`relative ${className}`}>
+    <div ref={wrapperRef} className={className}>
       <canvas
         ref={canvasRef}
         className="absolute inset-0 h-full w-full"
         aria-hidden
       />
-      {/* Timer text overlay – DOM layer for crisp, accessible rendering */}
-      <div
-        className="pointer-events-none absolute inset-0 flex items-center justify-center"
-        aria-live="polite"
-        aria-label={`Timer: ${displayTime}`}
-      >
-        <span className="select-none font-mono text-2xl font-light tracking-widest text-amber-100/85 drop-shadow-[0_1px_8px_rgba(200,146,26,0.5)]">
-          {displayTime}
-        </span>
-      </div>
+      {showTimer && (
+        <div
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          aria-live="polite"
+          aria-label={`Timer: ${displayTime}`}
+        >
+          <span className="select-none font-mono text-2xl font-light tracking-widest text-amber-100/85 drop-shadow-[0_1px_8px_rgba(200,146,26,0.5)]">
+            {displayTime}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

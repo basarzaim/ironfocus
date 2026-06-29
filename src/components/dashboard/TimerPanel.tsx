@@ -1,13 +1,56 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useAppState } from "../../state/AppStateProvider";
 import { useFocusTimerContext } from "../../features/timer/TimerProvider";
 import { useTheme } from "../../state/ThemeProvider";
 import { formatMinutesHuman, parseTimeToDate } from "../../lib/time";
 import { shouldPlayFocusAutoCompleteNotify } from "../../lib/focusCompletionNotificationDedup";
+import {
+  CORE_GROWTH_PREVIEW_STORAGE_KEY,
+  GROWTH_PREVIEW_RAMP_SECONDS,
+  getCoreGrowthPreviewProps,
+  getInitialGrowthPreviewEnabled,
+} from "../../lib/coreGrowthPreview";
 import { LivingCore } from "../../features/timer/components/LivingCore";
+import { PlasmaCore } from "../../features/timer/components/PlasmaCore";
+import { ReactorCore } from "../../features/timer/components/ReactorCore";
+import { FluidCore } from "../../features/timer/components/FluidCore";
+
+const IronReactorCore = lazy(() =>
+  import("../../features/timer/components/IronReactorCore").then((m) => ({
+    default: m.IronReactorCore,
+  })),
+);
+
+type CoreVariant = "living" | "plasma" | "reactor" | "fluid" | "ironcore";
+
+const CORE_VARIANTS: { id: CoreVariant; label: string; hint: string; visible?: boolean }[] = [
+  { id: "living", label: "Living", hint: "Concentric rings", visible: false },
+  { id: "plasma", label: "Plasma", hint: "Molten mass", visible: false },
+  { id: "reactor", label: "Reactor", hint: "Containment core", visible: false },
+  { id: "ironcore", label: "Iron Core", hint: "Forged breath · real 3D", visible: true },
+  { id: "fluid", label: "Fluid", hint: "Orbiting particles", visible: false },
+];
+
+const VISIBLE_CORE_VARIANTS = CORE_VARIANTS.filter((variant) => variant.visible !== false);
+
+const CORE_COMPONENTS = {
+  living: LivingCore,
+  plasma: PlasmaCore,
+  reactor: ReactorCore,
+  ironcore: IronReactorCore,
+  fluid: FluidCore,
+} as const;
 
 const PRESETS = [30, 45, 60, 90, 120, 180];
 const PLANNED_MINUTES_STORAGE_KEY = "ironfocus-timer-planned-minutes";
+const CORE_VARIANT_STORAGE_KEY = "ironfocus-core-variant-preview";
+
+function getInitialCoreVariant(): CoreVariant {
+  if (typeof window === "undefined") return "ironcore";
+  const raw = window.localStorage.getItem(CORE_VARIANT_STORAGE_KEY);
+  const stored = CORE_VARIANTS.find((variant) => variant.id === raw && variant.visible !== false);
+  return stored?.id ?? "ironcore";
+}
 
 
 type TimerPanelProps = {
@@ -43,6 +86,16 @@ export function TimerPanel({
   );
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [showDiscardSessionModal, setShowDiscardSessionModal] = useState(false);
+  const [coreVariant, setCoreVariant] = useState<CoreVariant>(getInitialCoreVariant);
+  const [growthPreview, setGrowthPreview] = useState(getInitialGrowthPreviewEnabled);
+  const Core = CORE_COMPONENTS[coreVariant];
+
+  const coreTimerProps = getCoreGrowthPreviewProps({
+    elapsedSeconds: timer.elapsedSeconds,
+    targetSeconds: timer.targetSeconds,
+    mode: timer.mode,
+    enabled: growthPreview,
+  });
 
 
   function formatPlannedTime(minutes: number): string {
@@ -244,6 +297,19 @@ export function TimerPanel({
       window.localStorage.removeItem(PLANNED_MINUTES_STORAGE_KEY);
     }
   }, [plannedMinutes]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(CORE_VARIANT_STORAGE_KEY, coreVariant);
+  }, [coreVariant]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      CORE_GROWTH_PREVIEW_STORAGE_KEY,
+      growthPreview ? "1" : "0",
+    );
+  }, [growthPreview]);
 
   useEffect(() => {
     if (!focusMode) setShowDiscardSessionModal(false);
@@ -758,20 +824,7 @@ export function TimerPanel({
       : "Ready to focus";
 
   return (
-    <section className="relative flex min-h-full flex-1 flex-col overflow-hidden">
-      <div
-        aria-hidden
-        className={`pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] transition-opacity duration-700 ${
-          timer.isRunning
-            ? isWife
-              ? "bg-pink-500/20 opacity-100"
-              : "bg-amber-500/15 opacity-100"
-            : isWife
-              ? "bg-pink-500/10 opacity-70"
-              : "bg-amber-500/10 opacity-70"
-        }`}
-      />
-
+    <section className="relative flex min-h-full flex-1 flex-col">
       <header className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-neutral-500">
@@ -878,40 +931,61 @@ export function TimerPanel({
       )}
 
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-7 py-4">
-        <div className="flex w-full flex-col items-center gap-6">
-          <div className="w-full max-w-[240px]">
-              <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-500">
-                Category (optional)
-              </label>
-              <select
-                value={plannedCategoryId}
-                onChange={(e) => setPlannedCategoryId(e.target.value)}
-                disabled={hasActiveSession}
-                className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none ${
-                  hasActiveSession ? "cursor-not-allowed opacity-60" : ""
-                } ${
-                  isWife ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
-                }`}
-              >
-                <option value="">None</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
+        <div className="relative z-10 flex w-full max-w-lg flex-col items-center gap-6 px-2">
+          <div className="relative z-10 w-full max-w-[240px]">
+            <label className="mb-1 block text-[11px] font-medium uppercase tracking-[0.18em] text-neutral-500">
+              Category (optional)
+            </label>
+            <select
+              value={plannedCategoryId}
+              onChange={(e) => setPlannedCategoryId(e.target.value)}
+              disabled={hasActiveSession}
+              className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none ${
+                hasActiveSession ? "cursor-not-allowed opacity-60" : ""
+              } ${
+                isWife ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+              }`}
+            >
+              <option value="">None</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
               ))}
             </select>
           </div>
-          <LivingCore
-            mode={timer.mode}
-            isRunning={timer.isRunning}
-            elapsedSeconds={timer.elapsedSeconds}
-            targetSeconds={timer.targetSeconds}
-            displayTime={displayLabel}
-            className="aspect-square w-full max-w-[22rem] sm:max-w-[26rem] md:max-w-[30rem]"
-          />
+          <div
+            className="relative z-10 flex aspect-square w-full max-w-[25rem] items-center justify-center overflow-visible sm:max-w-[29rem] md:max-w-[34rem]"
+            aria-live="polite"
+            aria-label={`Timer: ${displayLabel}`}
+          >
+            <Suspense fallback={null}>
+              <Core
+                ambient
+                showTimer={false}
+                mode={timer.mode}
+                isRunning={timer.isRunning}
+                elapsedSeconds={coreTimerProps.elapsedSeconds}
+                targetSeconds={coreTimerProps.targetSeconds}
+                displayTime={displayLabel}
+                className={`pointer-events-none absolute -inset-[22%] z-0 ${
+                  coreVariant === "plasma"
+                    ? "[mask-image:radial-gradient(circle_at_50%_50%,#000_0%,#000_52%,transparent_74%)] [-webkit-mask-image:radial-gradient(circle_at_50%_50%,#000_0%,#000_52%,transparent_74%)]"
+                    : "[mask-image:radial-gradient(circle_at_50%_50%,#000_0%,#000_46%,transparent_70%)] [-webkit-mask-image:radial-gradient(circle_at_50%_50%,#000_0%,#000_46%,transparent_70%)]"
+                }`}
+              />
+            </Suspense>
+            <span className="relative z-10 select-none font-mono text-2xl font-medium tracking-widest text-amber-50 [text-shadow:0_0_28px_rgba(0,0,0,1),0_0_12px_rgba(0,0,0,0.95),0_2px_6px_rgba(0,0,0,0.9),0_0_14px_rgba(251,191,36,0.35)]">
+              <span
+                aria-hidden
+                className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[5.5rem] w-[11rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(12,10,8,0.92)_0%,rgba(12,10,8,0.72)_42%,rgba(12,10,8,0.25)_68%,transparent_82%)]"
+              />
+              <span className="relative">{displayLabel}</span>
+            </span>
+          </div>
 
           <div
-            className={`text-[11px] font-medium uppercase tracking-[0.25em] ${
+            className={`relative z-10 text-[11px] font-medium uppercase tracking-[0.25em] ${
               timer.isRunning
                 ? isWife
                   ? "text-pink-300/90"
@@ -922,7 +996,7 @@ export function TimerPanel({
             {statusText}
           </div>
 
-          <div className="mt-1 flex flex-wrap justify-center gap-3">
+          <div className="relative z-10 mt-1 flex flex-wrap justify-center gap-3">
             <button
               type="button"
               onClick={handlePrimaryTimerAction}
@@ -947,7 +1021,53 @@ export function TimerPanel({
           </div>
         </div>
 
-        <div className="flex w-full max-w-md flex-col items-center gap-2">
+        <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-2">
+          {VISIBLE_CORE_VARIANTS.length > 1 && (
+            <>
+              <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-neutral-600">
+                Core design
+              </span>
+              <div
+                className={segmentTrackClassDashboard}
+                role="radiogroup"
+                aria-label="Core design preview"
+              >
+                {VISIBLE_CORE_VARIANTS.map((variant) => (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={coreVariant === variant.id}
+                    title={variant.hint}
+                    onClick={() => setCoreVariant(variant.id)}
+                    className={`${segmentBtnBaseDashboard} ${
+                      coreVariant === variant.id
+                        ? isWife
+                          ? segmentActiveWife
+                          : segmentActiveClassic
+                        : segmentInactive
+                    }`}
+                  >
+                    {variant.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <label className="mt-1 flex cursor-pointer items-center gap-2 text-[10px] text-neutral-500">
+            <input
+              type="checkbox"
+              checked={growthPreview}
+              onChange={(e) => setGrowthPreview(e.target.checked)}
+              className="rounded border-neutral-700 bg-neutral-900 text-amber-500 focus:ring-amber-500/40"
+            />
+            <span>
+              Growth preview ({GROWTH_PREVIEW_RAMP_SECONDS}s → 3h max depth, visuals only)
+            </span>
+          </label>
+        </div>
+
+        <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-2">
           <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-neutral-600">
             Quick presets
           </span>

@@ -10,6 +10,10 @@ export interface FluidCoreProps {
   targetSeconds: number | null;
   displayTime: string;
   className?: string;
+  /** Full-bleed ambient layer (edge fade handled by parent wrapper). */
+  ambient?: boolean;
+  /** When false, timer digits are omitted (parent renders them in the UI stack). */
+  showTimer?: boolean;
 }
 
 // ── Internal types ─────────────────────────────────────────────────────────────
@@ -433,6 +437,7 @@ export const FluidCore: FC<FluidCoreProps> = ({
   targetSeconds,
   displayTime,
   className = "h-72 w-72",
+  showTimer = true,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -614,11 +619,13 @@ export const FluidCore: FC<FluidCoreProps> = ({
         aria-live="polite"
         aria-label={`Timer: ${displayTime}`}
       >
-        <span
-          className={`select-none font-mono text-2xl font-light tracking-widest ${textColorClass} ${textGlowClass}`}
-        >
-          {displayTime}
-        </span>
+        {showTimer && (
+          <span
+            className={`select-none font-mono text-2xl font-light tracking-widest ${textColorClass} ${textGlowClass}`}
+          >
+            {displayTime}
+          </span>
+        )}
       </div>
     </div>
   );

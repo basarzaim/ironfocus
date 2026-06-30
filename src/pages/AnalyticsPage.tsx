@@ -28,11 +28,11 @@ type PeriodNavProps = {
   onPrev: () => void;
   onNext: () => void;
   canGoNext: boolean;
-  isWife: boolean;
+  isRose: boolean;
 };
 
-function PeriodNav({ onPrev, onNext, canGoNext, isWife }: PeriodNavProps) {
-  const navHover = isWife
+function PeriodNav({ onPrev, onNext, canGoNext, isRose }: PeriodNavProps) {
+  const navHover = isRose
     ? "hover:border-pink-500/50 hover:text-pink-300"
     : "hover:border-amber-500/50 hover:text-amber-400";
 
@@ -90,11 +90,11 @@ export function AnalyticsPage() {
   const [monthOffset, setMonthOffset] = useState(0);
   const { logs, categories } = useAppState();
   const { theme } = useTheme();
-  const isWife = theme === "wife";
+  const isRose = theme === "rose";
 
   const segmentTrack =
     "inline-flex items-center gap-0.5 rounded-full border border-neutral-800/80 bg-neutral-950/50 p-1 backdrop-blur-sm";
-  const segmentActive = isWife
+  const segmentActive = isRose
     ? "bg-pink-500 text-white shadow-sm shadow-pink-950/30 ring-1 ring-pink-400/30"
     : "bg-amber-500 text-neutral-950 shadow-sm shadow-amber-950/30 ring-1 ring-amber-400/40";
   const segmentInactive =
@@ -240,7 +240,7 @@ export function AnalyticsPage() {
       <header className="relative overflow-hidden rounded-2xl border border-neutral-800/80 bg-neutral-900/60 px-5 py-4 ring-1 ring-white/[0.03]">
         <div
           className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full blur-3xl ${
-            isWife ? "bg-pink-500/10" : "bg-amber-500/10"
+            isRose ? "bg-pink-500/10" : "bg-amber-500/10"
           }`}
           aria-hidden
         />
@@ -259,7 +259,7 @@ export function AnalyticsPage() {
           <div className="flex flex-wrap items-center gap-3">
             <span
               className={`hidden text-[11px] font-medium tabular-nums sm:inline ${
-                isWife ? "text-pink-300/80" : "text-amber-300/80"
+                isRose ? "text-pink-300/80" : "text-amber-300/80"
               }`}
             >
               {formatMinutesHuman(totalMinutes)} in range
@@ -314,7 +314,7 @@ export function AnalyticsPage() {
             </span>
             <span
               className={`rounded-full border border-neutral-800/80 px-3 py-1 tabular-nums ${
-                isWife
+                isRose
                   ? "bg-pink-500/10 text-pink-300/90"
                   : "bg-amber-500/10 text-amber-300/90"
               }`}
@@ -399,7 +399,7 @@ export function AnalyticsPage() {
                 onPrev={handlePrevPeriod}
                 onNext={handleNextPeriod}
                 canGoNext={canGoNextPeriod}
-                isWife={isWife}
+                isRose={isRose}
               />
             </div>
           </header>
@@ -432,7 +432,7 @@ export function AnalyticsPage() {
                 onPrev={handlePrevPeriod}
                 onNext={handleNextPeriod}
                 canGoNext={canGoNextPeriod}
-                isWife={isWife}
+                isRose={isRose}
               />
             </div>
           </header>

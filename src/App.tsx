@@ -6,11 +6,17 @@ import { CategoriesPage } from "./pages/CategoriesPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AppStateProvider } from "./state/AppStateProvider";
+import { PreferencesProvider } from "./state/PreferencesProvider";
 import { FocusTimerProvider } from "./features/timer/TimerProvider";
 import { ThemeProvider } from "./state/ThemeProvider";
+import { OnboardingModal } from "./components/onboarding/OnboardingModal";
+import { isOnboardingCompleted } from "./lib/onboarding";
 
 function AppInner() {
   const [view, setView] = useState<AppViewKey>("focus");
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !isOnboardingCompleted(),
+  );
 
   let content: ReactElement;
   switch (view) {
@@ -24,7 +30,9 @@ function AppInner() {
       content = <AnalyticsPage />;
       break;
     case "settings":
-      content = <SettingsPage />;
+      content = (
+        <SettingsPage onReplayOnboarding={() => setShowOnboarding(true)} />
+      );
       break;
     case "focus":
     default:
@@ -32,20 +40,28 @@ function AppInner() {
   }
 
   return (
-    <AppShell activeView={view} onChangeView={setView}>
-      {content}
-    </AppShell>
+    <>
+      <AppShell activeView={view} onChangeView={setView}>
+        {content}
+      </AppShell>
+      <OnboardingModal
+        open={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+      />
+    </>
   );
 }
 
 function App() {
   return (
     <AppStateProvider>
-      <ThemeProvider>
-        <FocusTimerProvider>
-          <AppInner />
-        </FocusTimerProvider>
-      </ThemeProvider>
+      <PreferencesProvider>
+        <ThemeProvider>
+          <FocusTimerProvider>
+            <AppInner />
+          </FocusTimerProvider>
+        </ThemeProvider>
+      </PreferencesProvider>
     </AppStateProvider>
   );
 }

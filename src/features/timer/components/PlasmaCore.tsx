@@ -66,7 +66,7 @@ interface CanvasState {
   finishT: number;
 }
 
-/** Warm accent colors — classic gold or wife pink. Iron base stays shared. */
+/** Warm accent colors — classic gold or rose pink. Iron base stays shared. */
 interface AccentPalette {
   hot: string;
   warm: string;
@@ -99,7 +99,7 @@ const CLASSIC_ACCENT: AccentPalette = {
   coronaHint: K.BRONZE,
 };
 
-const WIFE_ACCENT: AccentPalette = {
+const ROSE_ACCENT: AccentPalette = {
   hot: "#fce7f3",
   warm: "#fce7f3",
   bright: "#f472b6",
@@ -488,7 +488,7 @@ export const PlasmaCore: FC<PlasmaCoreProps> = ({
     elapsedSeconds,
     targetSeconds,
     ambient,
-    palette: theme === "wife" ? WIFE_ACCENT : CLASSIC_ACCENT,
+    palette: theme === "rose" ? ROSE_ACCENT : CLASSIC_ACCENT,
     lightMode: colorMode === "light",
   });
   useEffect(() => {
@@ -498,7 +498,7 @@ export const PlasmaCore: FC<PlasmaCoreProps> = ({
       elapsedSeconds,
       targetSeconds,
       ambient,
-      palette: theme === "wife" ? WIFE_ACCENT : CLASSIC_ACCENT,
+      palette: theme === "rose" ? ROSE_ACCENT : CLASSIC_ACCENT,
       lightMode: colorMode === "light",
     };
   });
@@ -680,11 +680,11 @@ export const PlasmaCore: FC<PlasmaCoreProps> = ({
   }, []);
 
   const timerShadow =
-    theme === "wife"
+    theme === "rose"
       ? "drop-shadow-[0_1px_8px_rgba(236,72,153,0.5)]"
       : "drop-shadow-[0_1px_8px_rgba(200,146,26,0.5)]";
   const timerColor =
-    theme === "wife" ? "text-pink-100/85" : "text-amber-100/85";
+    theme === "rose" ? "text-pink-100/85" : "text-amber-100/85";
 
   return (
     <div ref={wrapperRef} className={className}>

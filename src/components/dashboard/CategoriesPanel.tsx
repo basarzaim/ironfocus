@@ -16,14 +16,14 @@ export function CategoriesPanel() {
   const [editingName, setEditingName] = useState("");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const { theme } = useTheme();
-  const isWife = theme === "wife";
+  const isRose = theme === "rose";
 
   const canAdd = newName.trim().length > 0;
 
-  const accentFocus = isWife
+  const accentFocus = isRose
     ? "focus:border-pink-500/70"
     : "focus:border-amber-500/70";
-  const accentBtn = isWife
+  const accentBtn = isRose
     ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
     : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500";
   const fieldClass = `rounded-lg border border-neutral-800/80 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none transition-colors placeholder:text-neutral-600 ${accentFocus}`;
@@ -101,7 +101,7 @@ export function CategoriesPanel() {
             <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-neutral-800/80 bg-neutral-950/30 px-6 text-center">
               <div
                 className={`flex h-11 w-11 items-center justify-center rounded-xl border border-neutral-800/80 bg-neutral-950/50 ${
-                  isWife ? "text-pink-400/70" : "text-amber-400/70"
+                  isRose ? "text-pink-400/70" : "text-amber-400/70"
                 }`}
               >
                 <svg
@@ -130,7 +130,7 @@ export function CategoriesPanel() {
               onMouseUp={() => setDraggingId(null)}
             >
               {categories.map((cat) => {
-                const swatch = cat.color ?? (isWife ? "#ec4899" : "#fbbf24");
+                const swatch = cat.color ?? (isRose ? "#ec4899" : "#fbbf24");
 
                 return (
                   <li

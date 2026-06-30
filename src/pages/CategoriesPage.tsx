@@ -5,14 +5,14 @@ import { useTheme } from "../state/ThemeProvider";
 export function CategoriesPage() {
   const { categories } = useAppState();
   const { theme } = useTheme();
-  const isWife = theme === "wife";
+  const isRose = theme === "rose";
 
   return (
     <div className="flex h-full flex-col gap-5">
       <header className="relative overflow-hidden rounded-2xl border border-neutral-800/80 bg-neutral-900/60 px-5 py-4 ring-1 ring-white/[0.03]">
         <div
           className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full blur-3xl ${
-            isWife ? "bg-pink-500/10" : "bg-amber-500/10"
+            isRose ? "bg-pink-500/10" : "bg-amber-500/10"
           }`}
           aria-hidden
         />
@@ -30,7 +30,7 @@ export function CategoriesPage() {
           </div>
           <span
             className={`inline-flex items-center rounded-full border border-neutral-800/80 px-3 py-1 text-[11px] font-medium tabular-nums ${
-              isWife
+              isRose
                 ? "bg-pink-500/10 text-pink-300/90"
                 : "bg-amber-500/10 text-amber-300/90"
             }`}

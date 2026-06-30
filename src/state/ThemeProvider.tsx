@@ -5,8 +5,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { LEGACY_THEME_WIFE, STORAGE_KEYS } from "../lib/storageKeys";
 
-type Theme = "classic" | "wife";
+type Theme = "classic" | "rose";
 type ColorMode = "dark" | "light";
 
 type ThemeContextValue = {
@@ -20,29 +21,29 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-const STORAGE_KEY = "ironfocus.theme";
-const MODE_STORAGE_KEY = "ironfocus.colorMode";
+function readStoredTheme(): Theme {
+  if (typeof window === "undefined") return "classic";
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.theme);
+    if (raw === "classic" || raw === "rose") return raw;
+    if (raw === LEGACY_THEME_WIFE) return "rose";
+  } catch {
+    // ignore
+  }
+  return "classic";
+}
 
 type ThemeProviderProps = {
   children: ReactNode;
 };
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "wife";
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw === "classic" || raw === "wife") return raw;
-    } catch {
-      // ignore
-    }
-    return "wife";
-  });
+  const [theme, setThemeState] = useState<Theme>(readStoredTheme);
 
   const [colorMode, setColorModeState] = useState<ColorMode>(() => {
     if (typeof window === "undefined") return "dark";
     try {
-      const raw = window.localStorage.getItem(MODE_STORAGE_KEY);
+      const raw = window.localStorage.getItem(STORAGE_KEYS.colorMode);
       if (raw === "dark" || raw === "light") return raw;
     } catch {
       // ignore
@@ -53,10 +54,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem(STORAGE_KEY, theme);
+      window.localStorage.setItem(STORAGE_KEYS.theme, theme);
       const root = window.document.documentElement;
-      root.classList.remove("theme-classic", "theme-wife");
-      root.classList.add(theme === "wife" ? "theme-wife" : "theme-classic");
+      root.classList.remove("theme-classic", "theme-rose", "theme-wife");
+      root.classList.add(theme === "rose" ? "theme-rose" : "theme-classic");
     } catch {
       // ignore
     }
@@ -65,7 +66,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem(MODE_STORAGE_KEY, colorMode);
+      window.localStorage.setItem(STORAGE_KEYS.colorMode, colorMode);
       const root = window.document.documentElement;
       root.classList.remove("mode-dark", "mode-light");
       root.classList.add(colorMode === "light" ? "mode-light" : "mode-dark");
@@ -83,7 +84,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   };
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === "classic" ? "wife" : "classic"));
+    setThemeState((prev) => (prev === "classic" ? "rose" : "classic"));
   };
 
   const toggleColorMode = () => {
@@ -114,3 +115,7 @@ export function useTheme(): ThemeContextValue {
   return ctx;
 }
 
+export function useRoseAccent(): boolean {
+  const { theme } = useTheme();
+  return theme === "rose";
+}

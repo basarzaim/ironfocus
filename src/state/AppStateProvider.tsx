@@ -8,6 +8,21 @@ import {
 } from "react";
 import type { Category, LogEntry } from "../types/models";
 import { diffMinutes, parseTimeToDate } from "../lib/time";
+import { STORAGE_KEYS } from "../lib/storageKeys";
+import {
+  createBackupPayload,
+  mergeBackupData,
+  parseBackupJson,
+  replaceBackupData,
+  type BackupPayload,
+  type MergeResult,
+} from "../lib/dataBackup";
+import {
+  getRetentionDays,
+  loadUserPreferences,
+  pruneLogsByRetention,
+  saveUserPreferences,
+} from "../lib/userPreferences";
 
 type AppStateContextValue = {
   categories: Category[];
@@ -35,6 +50,22 @@ type AppStateContextValue = {
     endTime: string;
     notes: string;
   }) => { ok: true } | { ok: false; error: string };
+  exportSnapshot: () => BackupPayload;
+  importSnapshotMerge: (
+    payload: BackupPayload,
+  ) => { ok: true; stats: MergeResult } | { ok: false; error: string };
+  importSnapshotReplace: (
+    payload: BackupPayload,
+  ) => { ok: true } | { ok: false; error: string };
+  importFromJson: (
+    text: string,
+    mode: "merge" | "replace",
+  ) =>
+    | { ok: true; stats?: MergeResult }
+    | { ok: false; error: string };
+  clearAllData: () => void;
+  lastRetentionRemovedCount: number;
+  pruneLogsByRetentionPolicy: () => number;
 };
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(
@@ -51,12 +82,12 @@ const DEFAULT_CATEGORY_NAMES = [
 ];
 
 const DEFAULT_CATEGORY_COLORS = [
-  "#fbbf24", // amber (classic default accent)
-  "#f97316", // orange
-  "#22d3ee", // cyan
-  "#a855f7", // purple
-  "#4ade80", // green
-  "#38bdf8", // sky
+  "#fbbf24",
+  "#f97316",
+  "#22d3ee",
+  "#a855f7",
+  "#4ade80",
+  "#38bdf8",
 ];
 
 function createInitialCategories(): Category[] {
@@ -69,41 +100,46 @@ function createInitialCategories(): Category[] {
   }));
 }
 
-const STORAGE_KEYS = {
-  categories: "ironfocus.categories.v1",
-  logs: "ironfocus.logs.v1",
-} as const;
+function loadCategories(): Category[] {
+  if (typeof window === "undefined") return createInitialCategories();
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.categories);
+    if (!raw) return createInitialCategories();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return createInitialCategories();
+    return parsed as Category[];
+  } catch {
+    return createInitialCategories();
+  }
+}
+
+function loadLogs(): LogEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEYS.logs);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed as LogEntry[];
+  } catch {
+    return [];
+  }
+}
+
+function shouldRunRetentionToday(lastRunAt: string | null, now = new Date()): boolean {
+  if (!lastRunAt) return true;
+  const last = new Date(lastRunAt);
+  return last.toDateString() !== now.toDateString();
+}
 
 type AppStateProviderProps = {
   children: ReactNode;
 };
 
 export function AppStateProvider({ children }: AppStateProviderProps) {
-  const [categories, setCategories] = useState<Category[]>(() => {
-    if (typeof window === "undefined") return createInitialCategories();
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEYS.categories);
-      if (!raw) return createInitialCategories();
-      const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) return createInitialCategories();
-      return parsed as Category[];
-    } catch {
-      return createInitialCategories();
-    }
-  });
-
-  const [logs, setLogs] = useState<LogEntry[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEYS.logs);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) return [];
-      return parsed as LogEntry[];
-    } catch {
-      return [];
-    }
-  });
+  const [categories, setCategories] = useState<Category[]>(loadCategories);
+  const [logs, setLogs] = useState<LogEntry[]>(loadLogs);
+  const [lastRetentionRemovedCount, setLastRetentionRemovedCount] = useState(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -125,6 +161,26 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       // ignore storage errors
     }
   }, [logs]);
+
+  useEffect(() => {
+    const preferences = loadUserPreferences();
+    const retentionDays = getRetentionDays(preferences.retentionPolicy);
+    if (retentionDays === null) return;
+    if (!shouldRunRetentionToday(preferences.lastRetentionRunAt)) return;
+
+    setLogs((prev) => {
+      const { kept, removedCount } = pruneLogsByRetention(prev, retentionDays);
+      if (removedCount === 0) return prev;
+      setLastRetentionRemovedCount(removedCount);
+      const keptSet = new Set(kept);
+      return prev.filter((log) => keptSet.has(log.id));
+    });
+
+    saveUserPreferences({
+      ...preferences,
+      lastRetentionRunAt: new Date().toISOString(),
+    });
+  }, []);
 
   function validateAndBuildLog(input: {
     id: string;
@@ -194,6 +250,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     () => ({
       categories,
       logs,
+      lastRetentionRemovedCount,
       addCategory(name) {
         const trimmed = name.trim();
         if (!trimmed) return;
@@ -203,7 +260,8 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
           {
             id: `cat-${prev.length + 1}-${Date.now()}`,
             name: trimmed,
-            color: DEFAULT_CATEGORY_COLORS[prev.length % DEFAULT_CATEGORY_COLORS.length],
+            color:
+              DEFAULT_CATEGORY_COLORS[prev.length % DEFAULT_CATEGORY_COLORS.length],
             createdAt: now,
           },
         ]);
@@ -284,8 +342,63 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
         setLogs((prev) => prev.map((l) => (l.id === id ? build.log : l)));
         return { ok: true as const };
       },
+      exportSnapshot() {
+        return createBackupPayload(categories, logs);
+      },
+      importSnapshotMerge(payload) {
+        const merged = mergeBackupData(categories, logs, payload);
+        setCategories(merged.categories);
+        setLogs(merged.logs);
+        return { ok: true as const, stats: merged.stats };
+      },
+      importSnapshotReplace(payload) {
+        const replaced = replaceBackupData(payload);
+        setCategories(replaced.categories);
+        setLogs(replaced.logs);
+        return { ok: true as const };
+      },
+      importFromJson(text, mode) {
+        const parsed = parseBackupJson(text);
+        if (!parsed.ok) return parsed;
+        if (mode === "merge") {
+          const merged = mergeBackupData(categories, logs, parsed.data);
+          setCategories(merged.categories);
+          setLogs(merged.logs);
+          return { ok: true as const, stats: merged.stats };
+        }
+        const replaced = replaceBackupData(parsed.data);
+        setCategories(replaced.categories);
+        setLogs(replaced.logs);
+        return { ok: true as const };
+      },
+      clearAllData() {
+        setCategories(createInitialCategories());
+        setLogs([]);
+      },
+      pruneLogsByRetentionPolicy() {
+        const preferences = loadUserPreferences();
+        const retentionDays = getRetentionDays(preferences.retentionPolicy);
+        if (retentionDays === null) return 0;
+
+        let removedCount = 0;
+        setLogs((prev) => {
+          const result = pruneLogsByRetention(prev, retentionDays);
+          removedCount = result.removedCount;
+          if (removedCount === 0) return prev;
+          setLastRetentionRemovedCount(removedCount);
+          const keptSet = new Set(result.kept);
+          return prev.filter((log) => keptSet.has(log.id));
+        });
+
+        saveUserPreferences({
+          ...preferences,
+          lastRetentionRunAt: new Date().toISOString(),
+        });
+
+        return removedCount;
+      },
     }),
-    [categories, logs],
+    [categories, logs, lastRetentionRemovedCount],
   );
 
   return (
@@ -302,4 +415,3 @@ export function useAppState(): AppStateContextValue {
   }
   return ctx;
 }
-

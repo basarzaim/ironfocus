@@ -12,14 +12,14 @@ export function QuickLogPanel() {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
-  const isWife = theme === "wife";
+  const isRose = theme === "rose";
 
   const hasRequiredFields = categoryId && startTime && endTime;
 
-  const accentFocus = isWife
+  const accentFocus = isRose
     ? "focus:border-pink-500/70"
     : "focus:border-amber-500/70";
-  const accentBtn = isWife
+  const accentBtn = isRose
     ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
     : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500";
   const fieldClass = `w-full rounded-lg border border-neutral-800/80 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none transition-colors placeholder:text-neutral-600 ${accentFocus}`;
@@ -60,7 +60,7 @@ export function QuickLogPanel() {
         </div>
         <span
           className={`inline-flex items-center rounded-full border border-neutral-800/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
-            isWife
+            isRose
               ? "bg-pink-500/10 text-pink-300/90"
               : "bg-amber-500/10 text-amber-300/90"
           }`}

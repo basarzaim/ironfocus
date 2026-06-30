@@ -4,16 +4,17 @@ import { useFocusTimerContext } from "../../features/timer/TimerProvider";
 import { useTheme } from "../../state/ThemeProvider";
 import { formatMinutesHuman, parseTimeToDate } from "../../lib/time";
 import { shouldPlayFocusAutoCompleteNotify } from "../../lib/focusCompletionNotificationDedup";
-import {
-  CORE_GROWTH_PREVIEW_STORAGE_KEY,
-  GROWTH_PREVIEW_RAMP_SECONDS,
-  getCoreGrowthPreviewProps,
-  getInitialGrowthPreviewEnabled,
-} from "../../lib/coreGrowthPreview";
+import { loadUserPreferences } from "../../lib/userPreferences";
+import { STORAGE_KEYS } from "../../lib/storageKeys";
 import { LivingCore } from "../../features/timer/components/LivingCore";
 import { PlasmaCore } from "../../features/timer/components/PlasmaCore";
 import { ReactorCore } from "../../features/timer/components/ReactorCore";
 import { FluidCore } from "../../features/timer/components/FluidCore";
+import {
+  GROWTH_PREVIEW_RAMP_SECONDS,
+  getCoreGrowthPreviewProps,
+  getInitialGrowthPreviewEnabled,
+} from "../../lib/coreGrowthPreview";
 
 const IronReactorCore = lazy(() =>
   import("../../features/timer/components/IronReactorCore").then((m) => ({
@@ -42,12 +43,12 @@ const CORE_COMPONENTS = {
 } as const;
 
 const PRESETS = [30, 45, 60, 90, 120, 180];
-const PLANNED_MINUTES_STORAGE_KEY = "ironfocus-timer-planned-minutes";
-const CORE_VARIANT_STORAGE_KEY = "ironfocus-core-variant-preview";
+const SHOW_DEV_TOOLS = import.meta.env.DEV;
 
 function getInitialCoreVariant(): CoreVariant {
+  if (!SHOW_DEV_TOOLS) return "ironcore";
   if (typeof window === "undefined") return "ironcore";
-  const raw = window.localStorage.getItem(CORE_VARIANT_STORAGE_KEY);
+  const raw = window.localStorage.getItem(STORAGE_KEYS.coreVariantPreview);
   const stored = CORE_VARIANTS.find((variant) => variant.id === raw && variant.visible !== false);
   return stored?.id ?? "ironcore";
 }
@@ -60,7 +61,7 @@ type TimerPanelProps = {
 
 function getInitialPlannedMinutes(): number | null {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(PLANNED_MINUTES_STORAGE_KEY);
+  const raw = window.localStorage.getItem(STORAGE_KEYS.timerPlannedMinutes);
   if (!raw) return null;
   const parsed = Number.parseInt(raw, 10);
   if (Number.isNaN(parsed)) return null;
@@ -87,7 +88,9 @@ export function TimerPanel({
   const [showCompletionPopup, setShowCompletionPopup] = useState(false);
   const [showDiscardSessionModal, setShowDiscardSessionModal] = useState(false);
   const [coreVariant, setCoreVariant] = useState<CoreVariant>(getInitialCoreVariant);
-  const [growthPreview, setGrowthPreview] = useState(getInitialGrowthPreviewEnabled);
+  const [growthPreview, setGrowthPreview] = useState(
+    () => (SHOW_DEV_TOOLS ? getInitialGrowthPreviewEnabled() : false),
+  );
   const Core = CORE_COMPONENTS[coreVariant];
 
   const coreTimerProps = getCoreGrowthPreviewProps({
@@ -119,10 +122,11 @@ export function TimerPanel({
     : timer.displayTime;
 
   const { theme } = useTheme();
-  const isWife = theme === "wife";
+  const isRose = theme === "rose";
 
   function playSingleBeep() {
     if (typeof window === "undefined") return;
+    if (!loadUserPreferences().completionSoundEnabled) return;
     try {
       const AudioCtx =
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -174,6 +178,9 @@ export function TimerPanel({
     const playNotify = shouldPlayFocusAutoCompleteNotify(sessionId);
 
     if (playNotify) {
+      const preferences = loadUserPreferences();
+
+      if (preferences.completionSoundEnabled) {
       // Audio cue: three short beeps.
       try {
         const AudioCtx =
@@ -218,7 +225,9 @@ export function TimerPanel({
       } catch {
         // Ignore audio failures (e.g. browser policy).
       }
+      }
 
+      if (preferences.notificationsEnabled) {
       // Windows notification: use Tauri's native notification plugin (reliable in built app).
       (async () => {
         try {
@@ -264,6 +273,7 @@ export function TimerPanel({
           // Ignore notification failures.
         }
       })();
+      }
     }
 
     setShowCompletionPopup(true);
@@ -289,23 +299,23 @@ export function TimerPanel({
     if (typeof window === "undefined") return;
     if (plannedMinutes && plannedMinutes > 0) {
       window.localStorage.setItem(
-        PLANNED_MINUTES_STORAGE_KEY,
+        STORAGE_KEYS.timerPlannedMinutes,
         String(plannedMinutes),
       );
     } else {
-      window.localStorage.removeItem(PLANNED_MINUTES_STORAGE_KEY);
+      window.localStorage.removeItem(STORAGE_KEYS.timerPlannedMinutes);
     }
   }, [plannedMinutes]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(CORE_VARIANT_STORAGE_KEY, coreVariant);
+    if (!SHOW_DEV_TOOLS || typeof window === "undefined") return;
+    window.localStorage.setItem(STORAGE_KEYS.coreVariantPreview, coreVariant);
   }, [coreVariant]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!SHOW_DEV_TOOLS || typeof window === "undefined") return;
     window.localStorage.setItem(
-      CORE_GROWTH_PREVIEW_STORAGE_KEY,
+      STORAGE_KEYS.coreGrowthPreview,
       growthPreview ? "1" : "0",
     );
   }, [growthPreview]);
@@ -401,7 +411,7 @@ export function TimerPanel({
     "inline-flex rounded-xl border border-neutral-700/90 bg-neutral-950/80 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
   const segmentBtnBase =
     "min-h-[40px] min-w-[108px] rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-200";
-  const segmentActiveWife =
+  const segmentActiveRose =
     "bg-pink-500 text-white shadow-md shadow-pink-950/40 ring-1 ring-pink-400/30";
   const segmentActiveClassic =
     "bg-amber-500 text-neutral-950 shadow-md shadow-amber-950/30 ring-1 ring-amber-400/40";
@@ -415,7 +425,7 @@ export function TimerPanel({
   const segmentBtnBaseDashboard =
     "min-h-[34px] min-w-[94px] rounded-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-all duration-200";
 
-  const focusModeEnterClass = isWife
+  const focusModeEnterClass = isRose
     ? "border-pink-500/30 bg-pink-500/10 text-pink-200 ring-1 ring-inset ring-pink-400/10 hover:border-pink-400/50 hover:bg-pink-500/20 hover:text-pink-100"
     : "border-amber-500/30 bg-amber-500/10 text-amber-200 ring-1 ring-inset ring-amber-400/10 hover:border-amber-400/50 hover:bg-amber-500/20 hover:text-amber-100";
 
@@ -439,7 +449,7 @@ export function TimerPanel({
             <div className="flex items-center gap-3">
               <div
                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-neutral-900/90 ${
-                  isWife
+                  isRose
                     ? "border-pink-500/35 shadow-[inset_0_0_0_1px_rgba(236,72,153,0.12)]"
                     : "border-amber-500/35 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.12)]"
                 }`}
@@ -447,7 +457,7 @@ export function TimerPanel({
               >
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${
-                    isWife ? "bg-pink-400 shadow-[0_0_12px_rgba(244,114,182,0.65)]" : "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.55)]"
+                    isRose ? "bg-pink-400 shadow-[0_0_12px_rgba(244,114,182,0.65)]" : "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.55)]"
                   }`}
                 />
               </div>
@@ -474,8 +484,8 @@ export function TimerPanel({
                   }}
                   className={`${segmentBtnBase} ${
                     uiMode === "timer"
-                      ? isWife
-                        ? segmentActiveWife
+                      ? isRose
+                        ? segmentActiveRose
                         : segmentActiveClassic
                       : timer.isRunning || timer.sessionReadyToLog
                         ? segmentLocked
@@ -492,8 +502,8 @@ export function TimerPanel({
                   }}
                   className={`${segmentBtnBase} ${
                     uiMode === "stopwatch"
-                      ? isWife
-                        ? segmentActiveWife
+                      ? isRose
+                        ? segmentActiveRose
                         : segmentActiveClassic
                       : timer.isRunning || timer.sessionReadyToLog
                         ? segmentLocked
@@ -559,7 +569,7 @@ export function TimerPanel({
                       onChange={(e) => setLogTitle(e.target.value)}
                       placeholder="Focus session"
                       className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                        isWife ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                        isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
                       }`}
                     />
                   </div>
@@ -571,7 +581,7 @@ export function TimerPanel({
                       value={logCategoryId}
                       onChange={(e) => setLogCategoryId(e.target.value)}
                       className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none ${
-                        isWife ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                        isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
                       }`}
                     >
                       <option value="">Select category</option>
@@ -593,7 +603,7 @@ export function TimerPanel({
                     onChange={(e) => setLogNotes(e.target.value)}
                     placeholder="Notes"
                     className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                      isWife ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                      isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
                     }`}
                   />
                 </div>
@@ -603,7 +613,7 @@ export function TimerPanel({
                     onClick={handleConvertToLog}
                     disabled={!canConvert}
                     className={`inline-flex flex-1 items-center justify-center rounded-md border px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${
-                      isWife
+                      isRose
                         ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
                         : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500"
                     }`}
@@ -650,7 +660,7 @@ export function TimerPanel({
                     disabled={isSessionDone}
                     className={`inline-flex min-w-[152px] items-center justify-center rounded-xl border px-7 py-3.5 text-[11px] font-bold uppercase tracking-[0.18em] shadow-lg transition disabled:cursor-not-allowed disabled:border-neutral-700 disabled:bg-neutral-900/70 disabled:text-neutral-500 ${
                       timer.isRunning
-                        ? isWife
+                        ? isRose
                           ? "border-pink-500/60 bg-pink-500 text-white shadow-md shadow-pink-950/30 ring-1 ring-pink-400/30 hover:bg-pink-400"
                           : "border-amber-500/60 bg-amber-500 text-neutral-950 shadow-md shadow-amber-950/30 ring-1 ring-amber-400/40 hover:bg-amber-400"
                         : "border-neutral-500/80 bg-neutral-50 text-neutral-950 shadow-lg shadow-black/25 ring-1 ring-white/20 hover:bg-white"
@@ -685,7 +695,7 @@ export function TimerPanel({
                           onChange={(e) => setLogTitle(e.target.value)}
                           placeholder="Focus session"
                           className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                            isWife ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                            isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
                           }`}
                         />
                       </div>
@@ -697,7 +707,7 @@ export function TimerPanel({
                           value={logCategoryId}
                           onChange={(e) => setLogCategoryId(e.target.value)}
                           className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none ${
-                            isWife ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                            isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
                           }`}
                         >
                           <option value="">Select category</option>
@@ -719,7 +729,7 @@ export function TimerPanel({
                         onChange={(e) => setLogNotes(e.target.value)}
                         placeholder="Notes"
                         className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                          isWife ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                          isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
                         }`}
                       />
                     </div>
@@ -729,7 +739,7 @@ export function TimerPanel({
                         onClick={handleConvertToLog}
                         disabled={!canConvert}
                         className={`inline-flex flex-1 items-center justify-center rounded-md border px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${
-                          isWife
+                          isRose
                             ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
                             : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500"
                         }`}
@@ -843,8 +853,8 @@ export function TimerPanel({
               }}
               className={`${segmentBtnBaseDashboard} ${
                 uiMode === "timer"
-                  ? isWife
-                    ? segmentActiveWife
+                  ? isRose
+                    ? segmentActiveRose
                     : segmentActiveClassic
                   : hasActiveSession
                     ? segmentLocked
@@ -861,8 +871,8 @@ export function TimerPanel({
               }}
               className={`${segmentBtnBaseDashboard} ${
                 uiMode === "stopwatch"
-                  ? isWife
-                    ? segmentActiveWife
+                  ? isRose
+                    ? segmentActiveRose
                     : segmentActiveClassic
                   : hasActiveSession
                     ? segmentLocked
@@ -904,7 +914,7 @@ export function TimerPanel({
             <div className="flex items-center gap-3">
               <div
                 className={`flex h-7 w-7 items-center justify-center rounded-full text-sm ${
-                  isWife ? "bg-pink-600/60 text-pink-100" : "bg-amber-500/70 text-neutral-950"
+                  isRose ? "bg-pink-600/60 text-pink-100" : "bg-amber-500/70 text-neutral-950"
                 }`}
               >
                 ✓
@@ -942,7 +952,7 @@ export function TimerPanel({
               className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none ${
                 hasActiveSession ? "cursor-not-allowed opacity-60" : ""
               } ${
-                isWife ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
               }`}
             >
               <option value="">None</option>
@@ -986,7 +996,7 @@ export function TimerPanel({
           <div
             className={`relative z-10 text-[11px] font-medium uppercase tracking-[0.25em] ${
               timer.isRunning
-                ? isWife
+                ? isRose
                   ? "text-pink-300/90"
                   : "text-amber-300/90"
                 : "text-neutral-500"
@@ -1002,7 +1012,7 @@ export function TimerPanel({
               disabled={isSessionDone}
               className={`inline-flex min-w-[150px] items-center justify-center rounded-full border px-8 py-3 text-xs font-bold uppercase tracking-[0.18em] shadow-lg transition disabled:cursor-not-allowed disabled:border-neutral-700 disabled:bg-neutral-900/70 disabled:text-neutral-500 ${
                 timer.isRunning
-                  ? isWife
+                  ? isRose
                     ? "border-pink-500/60 bg-pink-500 text-white shadow-md shadow-pink-950/30 ring-1 ring-pink-400/30 hover:bg-pink-400"
                     : "border-amber-500/60 bg-amber-500 text-neutral-950 shadow-md shadow-amber-950/30 ring-1 ring-amber-400/40 hover:bg-amber-400"
                   : "border-neutral-500/70 bg-neutral-50/95 text-neutral-950 ring-1 ring-white/10 hover:bg-white"
@@ -1020,6 +1030,7 @@ export function TimerPanel({
           </div>
         </div>
 
+        {SHOW_DEV_TOOLS ? (
         <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-2">
           {VISIBLE_CORE_VARIANTS.length > 1 && (
             <>
@@ -1041,8 +1052,8 @@ export function TimerPanel({
                     onClick={() => setCoreVariant(variant.id)}
                     className={`${segmentBtnBaseDashboard} ${
                       coreVariant === variant.id
-                        ? isWife
-                          ? segmentActiveWife
+                        ? isRose
+                          ? segmentActiveRose
                           : segmentActiveClassic
                         : segmentInactive
                     }`}
@@ -1065,6 +1076,7 @@ export function TimerPanel({
             </span>
           </label>
         </div>
+        ) : null}
 
         <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-2">
           <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-neutral-600">
@@ -1084,10 +1096,10 @@ export function TimerPanel({
                   uiMode === "stopwatch" || hasActiveSession
                     ? "cursor-not-allowed border-neutral-800 bg-neutral-900 text-neutral-600 opacity-60"
                     : plannedMinutes === m
-                      ? isWife
+                      ? isRose
                         ? "border-pink-500 bg-pink-500/15 text-pink-300"
                         : "border-amber-500 bg-amber-500/15 text-amber-300"
-                      : isWife
+                      : isRose
                         ? "border-neutral-700 bg-neutral-900 text-neutral-200 hover:border-pink-500 hover:text-pink-300"
                         : "border-neutral-700 bg-neutral-900 text-neutral-200 hover:border-amber-600 hover:text-amber-400"
                 }`}
@@ -1120,7 +1132,7 @@ export function TimerPanel({
                 onChange={(e) => setLogTitle(e.target.value)}
                 placeholder="Focus session"
                 className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-2 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                  isWife
+                  isRose
                     ? "focus:border-pink-500/70"
                     : "focus:border-amber-500/70"
                 }`}
@@ -1134,7 +1146,7 @@ export function TimerPanel({
                 value={logCategoryId}
                 onChange={(e) => setLogCategoryId(e.target.value)}
                 className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-2 py-1.5 text-[11px] text-neutral-100 outline-none ${
-                  isWife
+                  isRose
                     ? "focus:border-pink-500/70"
                     : "focus:border-amber-500/70"
                 }`}
@@ -1155,7 +1167,7 @@ export function TimerPanel({
               onChange={(e) => setLogNotes(e.target.value)}
               placeholder="Notes (optional)"
               className={`flex-1 rounded-md border border-neutral-800 bg-neutral-950/60 px-2 py-1.5 text-[11px] text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                isWife
+                isRose
                   ? "focus:border-pink-500/70"
                   : "focus:border-amber-500/70"
               }`}
@@ -1165,7 +1177,7 @@ export function TimerPanel({
               onClick={handleConvertToLog}
               disabled={!canConvert}
               className={`inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${
-                isWife
+                isRose
                   ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
                   : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500"
               }`}

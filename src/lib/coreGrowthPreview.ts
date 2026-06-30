@@ -1,4 +1,5 @@
 import type { TimerMode } from "../types/models";
+import { STORAGE_KEYS } from "./storageKeys";
 
 /** Max session depth scale in cores (180 min). */
 export const MAX_DEPTH_SECONDS = 180 * 60;
@@ -6,18 +7,19 @@ export const MAX_DEPTH_SECONDS = 180 * 60;
 /** Real seconds to ramp cores to max depth. */
 export const GROWTH_PREVIEW_RAMP_SECONDS = 30;
 
-export const CORE_GROWTH_PREVIEW_STORAGE_KEY = "ironfocus-core-growth-preview";
-
 export function getInitialGrowthPreviewEnabled(): boolean {
   if (typeof window === "undefined") return true;
-  const stored = window.localStorage.getItem(CORE_GROWTH_PREVIEW_STORAGE_KEY);
+  const stored = window.localStorage.getItem(STORAGE_KEYS.coreGrowthPreview);
   if (stored === null) return true;
   return stored === "1";
 }
 
 export function setGrowthPreviewEnabled(enabled: boolean): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(CORE_GROWTH_PREVIEW_STORAGE_KEY, enabled ? "1" : "0");
+  window.localStorage.setItem(
+    STORAGE_KEYS.coreGrowthPreview,
+    enabled ? "1" : "0",
+  );
 }
 
 /**

@@ -10,7 +10,7 @@ type RangeKey = "all" | "today" | "week" | "month";
 export function LogsPage() {
   const { logs, categories, deleteLog, updateLogFromForm } = useAppState();
   const { theme } = useTheme();
-  const isWife = theme === "wife";
+  const isRose = theme === "rose";
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("date_desc");
@@ -190,22 +190,22 @@ export function LogsPage() {
     return { count: filteredLogs.length, totalMinutes };
   }, [filteredLogs]);
 
-  const accentFocus = isWife
+  const accentFocus = isRose
     ? "focus:border-pink-500/70"
     : "focus:border-amber-500/70";
-  const accentRing = isWife ? "ring-pink-500/40" : "ring-amber-500/40";
-  const accentBg = isWife
+  const accentRing = isRose ? "ring-pink-500/40" : "ring-amber-500/40";
+  const accentBg = isRose
     ? "bg-pink-500/15 text-pink-300"
     : "bg-amber-500/15 text-amber-300";
-  const accentBtn = isWife
+  const accentBtn = isRose
     ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
     : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500";
-  const accentNavHover = isWife
+  const accentNavHover = isRose
     ? "hover:border-pink-500/50 hover:text-pink-300"
     : "hover:border-amber-500/50 hover:text-amber-400";
   const segmentTrack =
     "inline-flex items-center gap-0.5 rounded-full border border-neutral-800/80 bg-neutral-950/50 p-1 backdrop-blur-sm";
-  const segmentActive = isWife
+  const segmentActive = isRose
     ? "bg-pink-500 text-white shadow-sm shadow-pink-950/30 ring-1 ring-pink-400/30"
     : "bg-amber-500 text-neutral-950 shadow-sm shadow-amber-950/30 ring-1 ring-amber-400/40";
   const segmentInactive =
@@ -219,7 +219,7 @@ export function LogsPage() {
       <header className="relative overflow-hidden rounded-2xl border border-neutral-800/80 bg-neutral-900/60 px-5 py-4 ring-1 ring-white/[0.03]">
         <div
           className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full blur-3xl ${
-            isWife ? "bg-pink-500/10" : "bg-amber-500/10"
+            isRose ? "bg-pink-500/10" : "bg-amber-500/10"
           }`}
           aria-hidden
         />
@@ -394,7 +394,7 @@ export function LogsPage() {
       {editingId ? (
         <section
           className={`${panelClass} border-l-2 p-4 md:p-5 ${
-            isWife ? "border-l-pink-500/60" : "border-l-amber-500/60"
+            isRose ? "border-l-pink-500/60" : "border-l-amber-500/60"
           }`}
         >
           <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -536,7 +536,7 @@ export function LogsPage() {
             <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-2xl border border-neutral-800/80 bg-neutral-950/50 ${
-                  isWife ? "text-pink-400/70" : "text-amber-400/70"
+                  isRose ? "text-pink-400/70" : "text-amber-400/70"
                 }`}
               >
                 <svg

@@ -28,8 +28,8 @@ html.mode-dark.theme-classic {
   scrollbar-color: rgba(245, 158, 11, 0.55) rgba(10, 10, 10, 0.9);
 }
 
-html.theme-wife,
-html.mode-dark.theme-wife {
+html.theme-rose,
+html.mode-dark.theme-rose {
   scrollbar-color: rgba(236, 72, 153, 0.55) rgba(10, 10, 10, 0.9);
 }
 
@@ -54,15 +54,15 @@ html.mode-dark.theme-classic *::-webkit-scrollbar-thumb:hover {
   background: rgba(245, 158, 11, 0.55);
 }
 
-html.theme-wife *::-webkit-scrollbar-thumb,
-html.mode-dark.theme-wife *::-webkit-scrollbar-thumb {
+html.theme-rose *::-webkit-scrollbar-thumb,
+html.mode-dark.theme-rose *::-webkit-scrollbar-thumb {
   background: rgba(236, 72, 153, 0.35);
   border: 2px solid rgba(10, 10, 10, 0.9);
   border-radius: 999px;
 }
 
-html.theme-wife *::-webkit-scrollbar-thumb:hover,
-html.mode-dark.theme-wife *::-webkit-scrollbar-thumb:hover {
+html.theme-rose *::-webkit-scrollbar-thumb:hover,
+html.mode-dark.theme-rose *::-webkit-scrollbar-thumb:hover {
   background: rgba(236, 72, 153, 0.55);
 }
 
@@ -426,7 +426,7 @@ html.mode-light.theme-classic {
   scrollbar-color: rgba(217, 119, 6, 0.55) var(--if-bg-app);
 }
 
-html.mode-light.theme-wife {
+html.mode-light.theme-rose {
   scrollbar-color: rgba(219, 39, 119, 0.55) var(--if-bg-app);
 }
 
@@ -439,11 +439,11 @@ html.mode-light.theme-classic *::-webkit-scrollbar-thumb:hover {
   background: rgba(217, 119, 6, 0.60);
 }
 
-html.mode-light.theme-wife *::-webkit-scrollbar-thumb {
+html.mode-light.theme-rose *::-webkit-scrollbar-thumb {
   background: rgba(219, 39, 119, 0.40);
   border-color: var(--if-bg-app);
 }
 
-html.mode-light.theme-wife *::-webkit-scrollbar-thumb:hover {
+html.mode-light.theme-rose *::-webkit-scrollbar-thumb:hover {
   background: rgba(219, 39, 119, 0.60);
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import appLogo from "../../../icon.png";
+import { PRODUCT_INFO } from "../../config/productInfo";
 import { useTheme } from "../../state/ThemeProvider";
 
 type NavItem = {
@@ -80,7 +81,7 @@ function SidebarItem({
   onSelect,
 }: SidebarItemProps) {
   const { theme } = useTheme();
-  const isWife = theme === "wife";
+  const isRose = theme === "rose";
 
   return (
     <button
@@ -92,7 +93,7 @@ function SidebarItem({
         collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2"
       } ${
         active
-          ? isWife
+          ? isRose
             ? "bg-pink-500/15 text-pink-100 ring-1 ring-pink-500/30"
             : "bg-amber-500/15 text-amber-100 ring-1 ring-amber-500/30"
           : "text-neutral-400 hover:bg-neutral-900/80 hover:text-neutral-100"
@@ -101,7 +102,7 @@ function SidebarItem({
       <span
         className={`transition-colors ${
           active
-            ? isWife
+            ? isRose
               ? "text-pink-300"
               : "text-amber-300"
             : "text-neutral-500 group-hover:text-neutral-300"
@@ -113,7 +114,7 @@ function SidebarItem({
       {collapsed && active ? (
         <span
           className={`absolute -right-0.5 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full ${
-            isWife ? "bg-pink-400" : "bg-amber-400"
+            isRose ? "bg-pink-400" : "bg-amber-400"
           }`}
           aria-hidden
         />
@@ -136,7 +137,7 @@ export function Sidebar({
   onChange,
 }: SidebarProps) {
   const { theme } = useTheme();
-  const isWife = theme === "wife";
+  const isRose = theme === "rose";
 
   return (
     <aside
@@ -156,19 +157,19 @@ export function Sidebar({
           <div className="min-w-0">
             <div
               className={`text-[10px] font-semibold uppercase tracking-[0.25em] ${
-                isWife ? "text-pink-400" : "text-amber-400"
+                isRose ? "text-pink-400" : "text-amber-400"
               }`}
             >
               BASAR ZAIM
             </div>
-            <div className="if-sidebar-brand mt-0.5 truncate text-sm font-medium text-neutral-400">
-              IronFocus
+            <div className="if-sidebar-brand mt-0.5 flex items-center gap-2 truncate text-sm font-medium text-neutral-400">
+              <span className="truncate">IronFocus</span>
+              {PRODUCT_INFO.channel === "Beta" ? (
+                <span className="shrink-0 rounded border border-amber-500/25 bg-amber-500/10 px-1 py-px text-[9px] font-semibold uppercase tracking-wider text-amber-300/80">
+                  Beta
+                </span>
+              ) : null}
             </div>
-            {isWife ? (
-              <div className="mt-0.5 truncate text-[10px] text-pink-400/90">
-                💗 For my dearest wife 💗
-              </div>
-            ) : null}
           </div>
         ) : null}
       </div>

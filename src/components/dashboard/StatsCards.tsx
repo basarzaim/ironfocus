@@ -16,17 +16,17 @@ type StatCardProps = {
   value: string;
   hint: string;
   accent?: "today" | "period" | "deep";
-  isWife: boolean;
+  isRose: boolean;
 };
 
-function StatCard({ label, value, hint, accent, isWife }: StatCardProps) {
+function StatCard({ label, value, hint, accent, isRose }: StatCardProps) {
   const accentBar =
     accent === "today"
-      ? isWife
+      ? isRose
         ? "from-pink-500/80 to-pink-500/0"
         : "from-amber-500/80 to-amber-500/0"
       : accent === "deep"
-        ? isWife
+        ? isRose
           ? "from-pink-400/60 to-pink-400/0"
           : "from-amber-400/60 to-amber-400/0"
         : "from-neutral-500/50 to-neutral-500/0";
@@ -55,7 +55,7 @@ export function StatsCards({
 }: StatsCardsProps) {
   const { logs: contextLogs } = useAppState();
   const { theme } = useTheme();
-  const isWife = theme === "wife";
+  const isRose = theme === "rose";
 
   const todayMinutes = useMemo(() => {
     return getTodayTotalMinutes(todayLogsOverride ?? contextLogs);
@@ -79,21 +79,21 @@ export function StatsCards({
         value={formatMinutesHuman(todayMinutes)}
         hint="Focused work so far"
         accent="today"
-        isWife={isWife}
+        isRose={isRose}
       />
       <StatCard
         label={periodTitle}
         value={formatMinutesHuman(periodMinutes)}
         hint="All categories in range"
         accent="period"
-        isWife={isWife}
+        isRose={isRose}
       />
       <StatCard
         label="Deep work"
         value={formatMinutesHuman(deepMinutes)}
         hint="Sessions ≥ 60 minutes"
         accent="deep"
-        isWife={isWife}
+        isRose={isRose}
       />
     </section>
   );

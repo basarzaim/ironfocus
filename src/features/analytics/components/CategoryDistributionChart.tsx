@@ -31,16 +31,16 @@ export function CategoryDistributionChart({
   );
   const { logs: contextLogs, categories } = useAppState();
   const { theme, colorMode } = useTheme();
-  const isWife = theme === "wife";
+  const isRose = theme === "rose";
   const isLight = colorMode === "light";
 
   const tickColor = isLight ? "#4a4a56" : "#9ca3af";
   const tooltipBg = isLight ? "#f0f1f4" : "#020617";
   const tooltipBorder = isLight ? "rgba(0,0,0,0.14)" : "#4b5563";
   const tooltipLabel = isLight ? "#17171a" : "#e5e7eb";
-  const tooltipItem = isWife ? "#db2777" : isLight ? "#b45309" : "#fbbf24";
+  const tooltipItem = isRose ? "#db2777" : isLight ? "#b45309" : "#fbbf24";
   const pieStroke = isLight ? "#e8eaee" : "#020617";
-  const barToggleHover = isWife
+  const barToggleHover = isRose
     ? "hover:border-pink-500 hover:text-pink-300"
     : "hover:border-amber-500 hover:text-amber-300";
   const logs = logsOverride ?? contextLogs;
@@ -54,7 +54,7 @@ export function CategoryDistributionChart({
         : FALLBACK_COLORS[index % FALLBACK_COLORS.length],
   }));
 
-  const segmentActive = isWife
+  const segmentActive = isRose
     ? "bg-pink-500/15 text-pink-300 ring-1 ring-pink-500/30"
     : "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30";
 
@@ -152,7 +152,7 @@ export function CategoryDistributionChart({
               )}
               <Tooltip
                 cursor={{
-                  fill: isWife
+                  fill: isRose
                     ? "rgba(219, 39, 119, 0.08)"
                     : "rgba(217, 119, 6, 0.08)",
                 }}

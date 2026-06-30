@@ -97,7 +97,6 @@ export function TimerPanel({
     enabled: growthPreview,
   });
 
-
   function formatPlannedTime(minutes: number): string {
     const totalSeconds = minutes * 60;
     const hrs = Math.floor(totalSeconds / 3600);

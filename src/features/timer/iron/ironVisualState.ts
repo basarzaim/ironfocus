@@ -16,6 +16,7 @@ export function resolveVeinUvScale(depthParam: number): number {
 
 /** Effective shader detail scale — amplifies start thinning without UV smear. */
 export function resolveVeinDetailScale(depthParam: number): number {
+  if (IRON_SCENE_TUNING.previewThinVeins) return 1;
   const eased = resolveVeinUvScale(depthParam);
   const strength = IRON_SCENE_TUNING.veinDetailStrength ?? 1;
   return 1 + (eased - 1) * strength;
@@ -37,6 +38,20 @@ export function resolveAuraDepthGate(depthParam: number): number {
   const { onset, span } = IRON_SCENE_TUNING.aura;
   const progress = resolveSessionProgress(depthParam);
   return clamp01((progress - onset) / span);
+}
+
+/** 0 at visual start — orange vein core builds as session grows past coreVisualDepthBase. */
+export function resolveVeinOrangeStrength(depthParam: number): number {
+  const { onset, span, maxMix } = IRON_SCENE_TUNING.veinOrange;
+  const progress = resolveSessionProgress(depthParam);
+  return clamp01((progress - onset) / span) * maxMix;
+}
+
+/** 0 at visual start — cavity AO from texture G builds with session progress. */
+export function resolveCellAoStrength(depthParam: number): number {
+  const { onset, span, maxStrength } = IRON_SCENE_TUNING.cellAo;
+  const progress = resolveSessionProgress(depthParam);
+  return clamp01((progress - onset) / span) * maxStrength;
 }
 
 export type IronCoreStatus = "idle" | "running" | "paused" | "finished";
@@ -151,6 +166,7 @@ function computeDepthParam(input: IronTimerInput): number {
 
 /** Lift session start to calibrated depth; progress still runs base → 1. */
 function resolveVisualDepthParam(rawDepth: number): number {
+  if (IRON_SCENE_TUNING.previewThinVeins) return clamp01(rawDepth);
   const base = IRON_SCENE_TUNING.coreVisualDepthBase;
   if (rawDepth <= 0) return base;
   return base + (1 - base) * clamp01(rawDepth);
@@ -242,6 +258,22 @@ export function stepIronVisual(
     breathExpand,
     ringBreathExpand,
   };
+}
+
+/** First-frame visual state — matches idle @ coreVisualDepthBase (avoids shader uniform snap). */
+export function bootstrapIronVisualFrame(reduced = false): IronVisualFrame {
+  const anim: IronAnimState = {
+    t: 0,
+    coreScale: CORE_BASE_SCALE,
+    precession: 0,
+  };
+  const input: IronTimerInput = {
+    mode: "idle",
+    isRunning: false,
+    elapsedSeconds: 0,
+    targetSeconds: null,
+  };
+  return stepIronVisual(anim, input, 0, reduced);
 }
 
 export function lerpIronColor(a: string, b: string, t: number): string {

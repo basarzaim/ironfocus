@@ -9,8 +9,10 @@ export const GROWTH_PREVIEW_RAMP_SECONDS = 30;
 export const CORE_GROWTH_PREVIEW_STORAGE_KEY = "ironfocus-core-growth-preview";
 
 export function getInitialGrowthPreviewEnabled(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(CORE_GROWTH_PREVIEW_STORAGE_KEY) === "1";
+  if (typeof window === "undefined") return true;
+  const stored = window.localStorage.getItem(CORE_GROWTH_PREVIEW_STORAGE_KEY);
+  if (stored === null) return true;
+  return stored === "1";
 }
 
 export function setGrowthPreviewEnabled(enabled: boolean): void {

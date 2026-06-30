@@ -5,7 +5,8 @@ import {
   type Texture,
 } from "three";
 
-export const VORONOI_BAKE_URL = "/textures/VoronoiPattern_Bake2.png";
+/** R = distance, G = cavity AO, B unused — packed from Bake2 + Bake3. */
+export const VORONOI_BAKE_URL = "/textures/rgb-compose.png";
 
 /** Linear distance-map bake — not sRGB albedo. */
 export function configureVoronoiDataTexture(texture: Texture): void {

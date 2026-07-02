@@ -1,4 +1,5 @@
 import { useRef, useEffect, type FC } from "react";
+import { ACCENT_TIMER_OVERLAY } from "../../../lib/accentStyles";
 import type { TimerMode } from "../../../types/models";
 
 // ── Public API (drop-in compatible with LivingCore / PlasmaCore) ────────────────
@@ -1212,7 +1213,7 @@ export const ReactorCore: FC<ReactorCoreProps> = ({
           aria-live="polite"
           aria-label={`Timer: ${displayTime}`}
         >
-          <span className="select-none font-mono text-2xl font-light tracking-widest text-amber-100/85 drop-shadow-[0_1px_8px_rgba(200,146,26,0.5)]">
+          <span className={ACCENT_TIMER_OVERLAY}>
             {displayTime}
           </span>
         </div>

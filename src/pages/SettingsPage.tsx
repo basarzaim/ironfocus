@@ -6,6 +6,7 @@ import { AppearanceSection } from "../components/settings/AppearanceSection";
 import { DataManagementSection } from "../components/settings/DataManagementSection";
 import { NotificationsSection } from "../components/settings/NotificationsSection";
 import { SupportSection } from "../components/settings/SupportSection";
+import { CHANNEL_BADGE } from "../lib/accentStyles";
 
 type SettingsPageProps = {
   onReplayOnboarding: () => void;
@@ -48,7 +49,7 @@ export function SettingsPage({ onReplayOnboarding }: SettingsPageProps) {
             Preferences and version information for your local focus console.
           </p>
         </div>
-        <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-300/90">
+        <span className={CHANNEL_BADGE}>
           Beta
         </span>
       </header>

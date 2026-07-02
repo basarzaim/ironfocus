@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import type { ReactorCoreProps } from "./ReactorCore";
+import { ACCENT_TIMER_OVERLAY } from "../../../lib/accentStyles";
 import { IronCoreCanvas } from "./iron3d/IronCoreCanvas";
 
 export interface IronReactorCoreProps extends Omit<ReactorCoreProps, "visualStyle"> {}
@@ -27,7 +28,7 @@ export const IronReactorCore: FC<IronReactorCoreProps> = ({
           aria-live="polite"
           aria-label={`Timer: ${displayTime}`}
         >
-          <span className="select-none font-mono text-2xl font-light tracking-widest text-amber-100/85 drop-shadow-[0_1px_8px_rgba(200,146,26,0.5)]">
+          <span className={ACCENT_TIMER_OVERLAY}>
             {displayTime}
           </span>
         </div>

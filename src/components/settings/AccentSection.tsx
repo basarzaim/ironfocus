@@ -1,4 +1,5 @@
 import { ACCENT_IDS, useTheme, type AccentId } from "../../state/ThemeProvider";
+import { ACCENT_CARD_SELECTED } from "../../lib/accentStyles";
 
 const ACCENT_SWATCH_HEX: Record<Exclude<AccentId, "classic">, string> = {
   pink: "#ec4899",
@@ -35,7 +36,7 @@ export function AccentSection() {
         aria-pressed={isClassic}
         className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left transition ${
           isClassic
-            ? "border-amber-500/50 bg-amber-500/10"
+            ? ACCENT_CARD_SELECTED
             : "border-neutral-800 bg-neutral-950/40 hover:border-neutral-700"
         }`}
       >

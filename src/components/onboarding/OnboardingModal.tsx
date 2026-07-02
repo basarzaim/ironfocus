@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { markOnboardingCompleted } from "../../lib/onboarding";
+import { ACCENT_BTN } from "../../lib/accentStyles";
 
 const STEPS = [
   {
@@ -27,8 +28,6 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
   if (!open) return null;
 
   const isLast = step >= STEPS.length - 1;
-  const accentBtn =
-    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-strong-rgb)/80%)] text-[var(--if-accent-on)] hover:bg-[rgb(var(--if-accent-rgb))]";
 
   function finish() {
     markOnboardingCompleted();
@@ -74,7 +73,7 @@ export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
           <button
             type="button"
             onClick={handleNext}
-            className={`rounded-md border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] ${accentBtn}`}
+            className={`rounded-md border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] ${ACCENT_BTN}`}
           >
             {isLast ? "Get started" : "Next"}
           </button>

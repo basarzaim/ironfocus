@@ -15,6 +15,13 @@ import {
   getCoreGrowthPreviewProps,
   getInitialGrowthPreviewEnabled,
 } from "../../lib/coreGrowthPreview";
+import {
+  ACCENT_BTN,
+  ACCENT_BTN_PRIMARY,
+  ACCENT_CHECKBOX,
+  ACCENT_FOCUS,
+  ACCENT_TIMER_DIAL,
+} from "../../lib/accentStyles";
 
 const IronReactorCore = lazy(() =>
   import("../../features/timer/components/IronReactorCore").then((m) => ({
@@ -423,11 +430,9 @@ export function TimerPanel({
   const focusModeEnterClass =
     "border-[rgb(var(--if-accent-rgb)/30%)] bg-[rgb(var(--if-accent-rgb)/10%)] text-[rgb(var(--if-accent-light-rgb))] ring-1 ring-inset ring-[rgb(var(--if-accent-light-rgb)/10%)] hover:border-[rgb(var(--if-accent-light-rgb)/50%)] hover:bg-[rgb(var(--if-accent-rgb)/20%)] hover:text-[rgb(var(--if-accent-light-rgb))]";
 
-  const accentFocusBorder = "focus:border-[rgb(var(--if-accent-rgb)/70%)]";
-  const accentSaveBtn =
-    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-strong-rgb)/80%)] text-[var(--if-accent-on)] hover:bg-[rgb(var(--if-accent-rgb))]";
-  const accentPrimaryBtn =
-    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-rgb))] text-[var(--if-accent-on)] shadow-md shadow-[rgb(var(--if-accent-rgb)/30%)] ring-1 ring-[rgb(var(--if-accent-rgb)/40%)] hover:bg-[rgb(var(--if-accent-light-rgb))]";
+  const accentFocusBorder = ACCENT_FOCUS;
+  const accentSaveBtn = ACCENT_BTN;
+  const accentPrimaryBtn = ACCENT_BTN_PRIMARY;
 
   const focusModeExitClass =
     "border-neutral-600 bg-neutral-900/90 text-neutral-100 shadow-md shadow-black/25 ring-1 ring-white/5 hover:border-neutral-500 hover:bg-neutral-800 hover:text-white";
@@ -952,7 +957,7 @@ export function TimerPanel({
                 }`}
               />
             </Suspense>
-            <span className="relative z-10 select-none font-mono text-2xl font-medium tracking-widest text-amber-50 [text-shadow:0_0_28px_rgba(0,0,0,1),0_0_12px_rgba(0,0,0,0.95),0_2px_6px_rgba(0,0,0,0.9),0_0_14px_rgba(251,191,36,0.35)]">
+            <span className={ACCENT_TIMER_DIAL}>
               <span
                 aria-hidden
                 className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[5.5rem] w-[11rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(12,10,8,0.92)_0%,rgba(12,10,8,0.72)_42%,rgba(12,10,8,0.25)_68%,transparent_82%)]"
@@ -1029,7 +1034,7 @@ export function TimerPanel({
               type="checkbox"
               checked={growthPreview}
               onChange={(e) => setGrowthPreview(e.target.checked)}
-              className="rounded border-neutral-700 bg-neutral-900 text-amber-500 focus:ring-amber-500/40"
+              className={ACCENT_CHECKBOX}
             />
             <span>
               Growth preview ({GROWTH_PREVIEW_RAMP_SECONDS}s → 3h max depth, visuals only)

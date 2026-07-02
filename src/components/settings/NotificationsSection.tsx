@@ -4,6 +4,7 @@ import {
   getNotificationPermissionState,
   requestNotificationPermission,
 } from "../../lib/notificationPermission";
+import { ACCENT_CALLOUT, ACCENT_CALLOUT_BTN } from "../../lib/accentStyles";
 
 export function NotificationsSection() {
   const {
@@ -50,14 +51,14 @@ export function NotificationsSection() {
       </label>
 
       {permission === "denied" && preferences.notificationsEnabled ? (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-amber-100/90">
+        <div className={`${ACCENT_CALLOUT} p-3`}>
           Notifications are blocked by Windows. Enable IronFocus in Settings →
           System → Notifications, or use the button below to request permission
           again.
           <button
             type="button"
             onClick={() => void handleEnableNotifications()}
-            className="mt-2 block rounded-md border border-amber-500/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-200"
+            className={`mt-2 block ${ACCENT_CALLOUT_BTN}`}
           >
             Request permission
           </button>

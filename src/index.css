@@ -115,7 +115,7 @@ html.mode-light {
   --if-bg-input:     #e4e6ea;  /* text/select inputs                         */
   --if-bg-hover:     rgba(0, 0, 0, 0.05);
   --if-bg-active:    rgba(0, 0, 0, 0.09);
-  --if-bg-selected:  rgba(245, 158, 11, 0.13);
+  --if-bg-selected:  rgb(var(--if-accent-rgb) / 0.13);
 
   /* === BORDER TOKENS ================================================== */
   --if-border-subtle:   rgba(0, 0, 0, 0.07);

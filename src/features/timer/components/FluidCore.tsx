@@ -596,15 +596,17 @@ export const FluidCore: FC<FluidCoreProps> = ({
   const status = deriveStatus(mode, isRunning, elapsedSeconds, targetSeconds);
 
   const textColorClass =
-    status === "running"  ? "text-amber-100/88" :
-    status === "finished" ? "text-amber-200/95" :
-    "text-neutral-400/70";
+    status === "running"
+      ? "text-[rgb(var(--if-accent-light-rgb)/88%)]"
+      : status === "finished"
+        ? "text-[rgb(var(--if-accent-light-rgb)/95%)]"
+        : "text-neutral-400/70";
 
   const textGlowClass =
     status === "running"
-      ? "drop-shadow-[0_0_14px_rgba(200,146,26,0.55)]"
+      ? "drop-shadow-[0_0_14px_rgb(var(--if-accent-rgb)/0.55)]"
       : status === "finished"
-        ? "drop-shadow-[0_0_20px_rgba(230,180,60,0.80)]"
+        ? "drop-shadow-[0_0_20px_rgb(var(--if-accent-light-rgb)/0.80)]"
         : "";
 
   return (

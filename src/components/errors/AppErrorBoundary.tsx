@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { ACCENT_BTN } from "../../lib/accentStyles";
 import { recordErrorReport } from "../../lib/errorReporting";
 
 type AppErrorBoundaryProps = {
@@ -41,7 +42,7 @@ export class AppErrorBoundary extends Component<
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="mt-4 rounded-md border border-amber-500/60 bg-amber-600/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-950"
+              className={`mt-4 rounded-md px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${ACCENT_BTN}`}
             >
               Reload app
             </button>

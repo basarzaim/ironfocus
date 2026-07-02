@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAppState } from "../../state/AppStateProvider";
+import { ACCENT_BTN, accentFieldClass } from "../../lib/accentStyles";
 import { getCssAccentColor } from "../../lib/accentColor";
 
 export function CategoriesPanel() {
@@ -18,10 +19,7 @@ export function CategoriesPanel() {
 
   const canAdd = newName.trim().length > 0;
 
-  const accentFocus = "focus:border-[rgb(var(--if-accent-rgb)/70%)]";
-  const accentBtn =
-    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-strong-rgb)/80%)] text-[var(--if-accent-on)] hover:bg-[rgb(var(--if-accent-rgb))]";
-  const fieldClass = `rounded-lg border border-neutral-800/80 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none transition-colors placeholder:text-neutral-600 ${accentFocus}`;
+  const fieldClass = accentFieldClass("rounded-lg px-3 py-2 text-xs");
 
   function startEdit(id: string, name: string) {
     setEditingId(id);
@@ -85,7 +83,7 @@ export function CategoriesPanel() {
               addCategory(newName);
               setNewName("");
             }}
-            className={`inline-flex shrink-0 items-center justify-center rounded-full border px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${accentBtn}`}
+            className={`inline-flex shrink-0 items-center justify-center rounded-full border px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${ACCENT_BTN}`}
           >
             Add category
           </button>

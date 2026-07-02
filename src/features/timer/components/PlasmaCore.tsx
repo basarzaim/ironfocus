@@ -1,4 +1,5 @@
 import { useRef, useEffect, type FC } from "react";
+import { ACCENT_TIMER_OVERLAY } from "../../../lib/accentStyles";
 import { useTheme, type AccentId } from "../../../state/ThemeProvider";
 import type { TimerMode } from "../../../types/models";
 
@@ -739,9 +740,6 @@ export const PlasmaCore: FC<PlasmaCoreProps> = ({
     };
   }, []);
 
-  const timerShadow = "drop-shadow-[0_1px_8px_rgb(var(--if-accent-rgb)/50%)]";
-  const timerColor = "text-[rgb(var(--if-accent-light-rgb)/85%)]";
-
   return (
     <div ref={wrapperRef} className={className}>
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden />
@@ -751,7 +749,7 @@ export const PlasmaCore: FC<PlasmaCoreProps> = ({
           aria-live="polite"
           aria-label={`Timer: ${displayTime}`}
         >
-          <span className={`select-none font-mono text-2xl font-light tracking-widest ${timerColor} ${timerShadow}`}>
+          <span className={ACCENT_TIMER_OVERLAY}>
             {displayTime}
           </span>
         </div>

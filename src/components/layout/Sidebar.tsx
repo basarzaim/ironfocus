@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import appLogo from "../../../icon.png";
 import { PRODUCT_INFO } from "../../config/productInfo";
+import { CHANNEL_BADGE_COMPACT } from "../../lib/accentStyles";
 
 type NavItem = {
   key: string;
@@ -148,7 +149,7 @@ export function Sidebar({
             <div className="if-sidebar-brand mt-0.5 flex items-center gap-2 truncate text-sm font-medium text-neutral-400">
               <span className="truncate">IronFocus</span>
               {PRODUCT_INFO.channel === "Beta" ? (
-                <span className="shrink-0 rounded border border-amber-500/25 bg-amber-500/10 px-1 py-px text-[9px] font-semibold uppercase tracking-wider text-amber-300/80">
+                <span className={CHANNEL_BADGE_COMPACT}>
                   Beta
                 </span>
               ) : null}

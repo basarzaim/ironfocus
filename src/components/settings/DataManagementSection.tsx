@@ -8,6 +8,7 @@ import {
 } from "../../lib/dataBackupFile";
 import type { BackupPayload } from "../../lib/dataBackup";
 import type { RetentionPolicy } from "../../lib/userPreferences";
+import { ACCENT_BTN, ACCENT_CALLOUT } from "../../lib/accentStyles";
 
 type ImportPreview = {
   payload: BackupPayload;
@@ -36,9 +37,6 @@ export function DataManagementSection() {
     null,
   );
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-
-  const accentBtn =
-    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-strong-rgb)/80%)] text-[var(--if-accent-on)] hover:bg-[rgb(var(--if-accent-rgb))]";
 
   async function handleExport() {
     setError(null);
@@ -134,7 +132,7 @@ export function DataManagementSection() {
         </div>
       ) : null}
       {storageIssues.length > 0 ? (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-100/90">
+        <div className={`${ACCENT_CALLOUT} p-3 text-[11px]`}>
           {storageIssues.join(" ")} Try importing a backup if data looks wrong.
         </div>
       ) : null}
@@ -147,7 +145,7 @@ export function DataManagementSection() {
         <button
           type="button"
           onClick={() => void handleExport()}
-          className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] ${accentBtn}`}
+          className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] ${ACCENT_BTN}`}
         >
           Export JSON
         </button>
@@ -255,7 +253,7 @@ export function DataManagementSection() {
             <button
               type="button"
               onClick={confirmImport}
-              className={`rounded-md border px-3 py-1 text-[11px] font-semibold ${accentBtn}`}
+              className={`rounded-md border px-3 py-1 text-[11px] font-semibold ${ACCENT_BTN}`}
             >
               Confirm
             </button>

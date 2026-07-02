@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useAppState } from "../state/AppStateProvider";
 import { formatMinutesHuman } from "../lib/time";
 import { QuickLogPanel } from "../components/dashboard/QuickLogPanel";
+import { ACCENT_BTN, accentFieldClass } from "../lib/accentStyles";
 
 type SortKey = "date_desc" | "date_asc" | "duration_desc" | "duration_asc";
 type RangeKey = "all" | "today" | "week" | "month";
@@ -187,12 +188,9 @@ export function LogsPage() {
     return { count: filteredLogs.length, totalMinutes };
   }, [filteredLogs]);
 
-  const accentFocus = "focus:border-[rgb(var(--if-accent-rgb)/70%)]";
   const accentRing = "ring-[rgb(var(--if-accent-rgb)/40%)]";
   const accentBg =
     "bg-[rgb(var(--if-accent-rgb)/15%)] text-[rgb(var(--if-accent-light-rgb))]";
-  const accentBtn =
-    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-strong-rgb)/80%)] text-[var(--if-accent-on)] hover:bg-[rgb(var(--if-accent-rgb))]";
   const accentNavHover =
     "hover:border-[rgb(var(--if-accent-rgb)/50%)] hover:text-[rgb(var(--if-accent-light-rgb))]";
   const segmentTrack =
@@ -201,7 +199,7 @@ export function LogsPage() {
     "bg-[rgb(var(--if-accent-rgb))] text-[var(--if-accent-on)] shadow-[0_1px_2px_rgb(var(--if-accent-strong-rgb)/30%)] ring-1 ring-[rgb(var(--if-accent-light-rgb)/40%)]";
   const segmentInactive =
     "text-neutral-500 hover:bg-neutral-800/50 hover:text-neutral-200";
-  const fieldClass = `w-full rounded-lg border border-neutral-800/80 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none transition-colors placeholder:text-neutral-600 ${accentFocus}`;
+  const fieldClass = accentFieldClass("w-full rounded-lg px-3 py-2 text-xs");
   const panelClass =
     "zs-panel overflow-hidden rounded-2xl border border-neutral-800/80 bg-neutral-900/80 ring-1 ring-white/[0.03]";
 
@@ -407,7 +405,7 @@ export function LogsPage() {
               <button
                 type="button"
                 onClick={saveEdit}
-                className={`inline-flex items-center justify-center rounded-full border px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] shadow-sm transition-colors ${accentBtn}`}
+                className={`inline-flex items-center justify-center rounded-full border px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] shadow-sm transition-colors ${ACCENT_BTN}`}
               >
                 Save
               </button>

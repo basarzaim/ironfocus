@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { PRIVACY_POLICY } from "../../content/privacyPolicy";
+import { ACCENT_BTN_SOFT } from "../../lib/accentStyles";
 import { PrivacyPolicyBody } from "./PrivacyPolicyBody";
 
 type PrivacyPolicyModalProps = {
@@ -18,9 +19,6 @@ export function PrivacyPolicyModal({ open, onClose }: PrivacyPolicyModalProps) {
   }, [open, onClose]);
 
   if (!open) return null;
-
-  const accentBtn =
-    "border-[rgb(var(--if-accent-rgb)/50%)] text-[rgb(var(--if-accent-light-rgb))] hover:border-[rgb(var(--if-accent-light-rgb))] hover:bg-[rgb(var(--if-accent-rgb)/10%)]";
 
   return (
     <div
@@ -55,7 +53,7 @@ export function PrivacyPolicyModal({ open, onClose }: PrivacyPolicyModalProps) {
               type="button"
               onClick={onClose}
               aria-label="Close privacy policy"
-              className={`rounded-md border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${accentBtn}`}
+              className={`rounded-md border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${ACCENT_BTN_SOFT}`}
             >
               Close
             </button>

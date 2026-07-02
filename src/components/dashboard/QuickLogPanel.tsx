@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useAppState } from "../../state/AppStateProvider";
+import { ACCENT_BTN, accentFieldClass } from "../../lib/accentStyles";
 
 export function QuickLogPanel() {
   const { categories, addLogFromForm } = useAppState();
@@ -13,10 +14,7 @@ export function QuickLogPanel() {
 
   const hasRequiredFields = categoryId && startTime && endTime;
 
-  const accentFocus = "focus:border-[rgb(var(--if-accent-rgb)/70%)]";
-  const accentBtn =
-    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-strong-rgb)/80%)] text-[var(--if-accent-on)] hover:bg-[rgb(var(--if-accent-rgb))]";
-  const fieldClass = `w-full rounded-lg border border-neutral-800/80 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none transition-colors placeholder:text-neutral-600 ${accentFocus}`;
+  const fieldClass = `${accentFieldClass("w-full rounded-lg px-3 py-2 text-xs")}`;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -149,7 +147,7 @@ export function QuickLogPanel() {
 
           <button
             type="submit"
-            className={`mt-2 inline-flex items-center justify-center rounded-full border px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${accentBtn}`}
+            className={`mt-2 inline-flex items-center justify-center rounded-full border px-5 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${ACCENT_BTN}`}
             disabled={!hasRequiredFields}
           >
             Add Log

@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check:accent": "node scripts/check-accent-drift.mjs",
     "tauri": "tauri"
   },
   "dependencies": {

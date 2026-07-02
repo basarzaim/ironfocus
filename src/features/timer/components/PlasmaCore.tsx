@@ -1,5 +1,5 @@
 import { useRef, useEffect, type FC } from "react";
-import { useTheme } from "../../../state/ThemeProvider";
+import { useTheme, type AccentId } from "../../../state/ThemeProvider";
 import type { TimerMode } from "../../../types/models";
 
 // ── Public API (drop-in compatible with LivingCore) ─────────────────────────────
@@ -99,13 +99,73 @@ const CLASSIC_ACCENT: AccentPalette = {
   coronaHint: K.BRONZE,
 };
 
-const ROSE_ACCENT: AccentPalette = {
+// Non-classic accents follow the same shape as PINK below: a pale tint (hot/warm),
+// a bright-400 highlight, a base-500 mid tone, a strong-600 secondary, and a
+// deeper-700 corona hint. These mirror the `--if-accent*` CSS custom properties
+// defined in src/index.css (html[data-accent="..."]), hand-picked as hex so they
+// stay compatible with this file's hex-based rgba()/lerpColorHex() helpers.
+const PINK_ACCENT: AccentPalette = {
   hot: "#fce7f3",
   warm: "#fce7f3",
   bright: "#f472b6",
   mid: "#ec4899",
   secondary: "#db2777",
   coronaHint: "#be185d",
+};
+
+const BLUE_ACCENT: AccentPalette = {
+  hot: "#dbeafe",
+  warm: "#dbeafe",
+  bright: "#60a5fa",
+  mid: "#3b82f6",
+  secondary: "#2563eb",
+  coronaHint: "#1d4ed8",
+};
+
+const PURPLE_ACCENT: AccentPalette = {
+  hot: "#f3e8ff",
+  warm: "#f3e8ff",
+  bright: "#c084fc",
+  mid: "#a855f7",
+  secondary: "#9333ea",
+  coronaHint: "#7e22ce",
+};
+
+const GREEN_ACCENT: AccentPalette = {
+  hot: "#dcfce7",
+  warm: "#dcfce7",
+  bright: "#4ade80",
+  mid: "#22c55e",
+  secondary: "#16a34a",
+  coronaHint: "#15803d",
+};
+
+const RED_ACCENT: AccentPalette = {
+  hot: "#fee2e2",
+  warm: "#fee2e2",
+  bright: "#f87171",
+  mid: "#ef4444",
+  secondary: "#dc2626",
+  coronaHint: "#b91c1c",
+};
+
+const TURQUOISE_ACCENT: AccentPalette = {
+  hot: "#ccfbf1",
+  warm: "#ccfbf1",
+  bright: "#2dd4bf",
+  mid: "#14b8a6",
+  secondary: "#0d9488",
+  coronaHint: "#0f766e",
+};
+
+const ACCENT_PALETTES: Record<AccentId, AccentPalette> = {
+  classic: CLASSIC_ACCENT,
+  pink: PINK_ACCENT,
+  blue: BLUE_ACCENT,
+  purple: PURPLE_ACCENT,
+  green: GREEN_ACCENT,
+  red: RED_ACCENT,
+  turquoise: TURQUOISE_ACCENT,
 };
 
 const BLOOM_MS = 560;
@@ -478,7 +538,7 @@ export const PlasmaCore: FC<PlasmaCoreProps> = ({
   ambient = false,
   showTimer = true,
 }) => {
-  const { theme, colorMode } = useTheme();
+  const { accentId, colorMode } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -488,7 +548,7 @@ export const PlasmaCore: FC<PlasmaCoreProps> = ({
     elapsedSeconds,
     targetSeconds,
     ambient,
-    palette: theme === "rose" ? ROSE_ACCENT : CLASSIC_ACCENT,
+    palette: ACCENT_PALETTES[accentId],
     lightMode: colorMode === "light",
   });
   useEffect(() => {
@@ -498,7 +558,7 @@ export const PlasmaCore: FC<PlasmaCoreProps> = ({
       elapsedSeconds,
       targetSeconds,
       ambient,
-      palette: theme === "rose" ? ROSE_ACCENT : CLASSIC_ACCENT,
+      palette: ACCENT_PALETTES[accentId],
       lightMode: colorMode === "light",
     };
   });
@@ -679,12 +739,8 @@ export const PlasmaCore: FC<PlasmaCoreProps> = ({
     };
   }, []);
 
-  const timerShadow =
-    theme === "rose"
-      ? "drop-shadow-[0_1px_8px_rgba(236,72,153,0.5)]"
-      : "drop-shadow-[0_1px_8px_rgba(200,146,26,0.5)]";
-  const timerColor =
-    theme === "rose" ? "text-pink-100/85" : "text-amber-100/85";
+  const timerShadow = "drop-shadow-[0_1px_8px_rgb(var(--if-accent-rgb)/50%)]";
+  const timerColor = "text-[rgb(var(--if-accent-light-rgb)/85%)]";
 
   return (
     <div ref={wrapperRef} className={className}>

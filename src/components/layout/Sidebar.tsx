@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import appLogo from "../../../icon.png";
 import { PRODUCT_INFO } from "../../config/productInfo";
-import { useTheme } from "../../state/ThemeProvider";
 
 type NavItem = {
   key: string;
@@ -80,9 +79,6 @@ function SidebarItem({
   collapsed,
   onSelect,
 }: SidebarItemProps) {
-  const { theme } = useTheme();
-  const isRose = theme === "rose";
-
   return (
     <button
       type="button"
@@ -93,18 +89,14 @@ function SidebarItem({
         collapsed ? "justify-center px-0 py-2.5" : "gap-2.5 px-3 py-2"
       } ${
         active
-          ? isRose
-            ? "bg-pink-500/15 text-pink-100 ring-1 ring-pink-500/30"
-            : "bg-amber-500/15 text-amber-100 ring-1 ring-amber-500/30"
+          ? "bg-[rgb(var(--if-accent-rgb)/15%)] text-[rgb(var(--if-accent-light-rgb))] ring-1 ring-[rgb(var(--if-accent-rgb)/30%)]"
           : "text-neutral-400 hover:bg-neutral-900/80 hover:text-neutral-100"
       }`}
     >
       <span
         className={`transition-colors ${
           active
-            ? isRose
-              ? "text-pink-300"
-              : "text-amber-300"
+            ? "text-[rgb(var(--if-accent-light-rgb))]"
             : "text-neutral-500 group-hover:text-neutral-300"
         }`}
       >
@@ -113,9 +105,7 @@ function SidebarItem({
       {!collapsed ? <span className="truncate">{label}</span> : null}
       {collapsed && active ? (
         <span
-          className={`absolute -right-0.5 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full ${
-            isRose ? "bg-pink-400" : "bg-amber-400"
-          }`}
+          className="absolute -right-0.5 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-[rgb(var(--if-accent-light-rgb))]"
           aria-hidden
         />
       ) : null}
@@ -136,9 +126,6 @@ export function Sidebar({
   onToggleCollapsed,
   onChange,
 }: SidebarProps) {
-  const { theme } = useTheme();
-  const isRose = theme === "rose";
-
   return (
     <aside
       className={`if-sidebar flex h-screen shrink-0 flex-col border-r border-neutral-800/80 bg-black/90 transition-[width,padding] duration-300 ease-out ${
@@ -155,11 +142,7 @@ export function Sidebar({
         </div>
         {!collapsed ? (
           <div className="min-w-0">
-            <div
-              className={`text-[10px] font-semibold uppercase tracking-[0.25em] ${
-                isRose ? "text-pink-400" : "text-amber-400"
-              }`}
-            >
+            <div className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[rgb(var(--if-accent-light-rgb))]">
               BASAR ZAIM
             </div>
             <div className="if-sidebar-brand mt-0.5 flex items-center gap-2 truncate text-sm font-medium text-neutral-400">

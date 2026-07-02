@@ -4,6 +4,11 @@ import { useAppState } from "../../../state/AppStateProvider";
 import { useTheme } from "../../../state/ThemeProvider";
 import { getBucketsForRange } from "../../../lib/analytics";
 import { formatMinutesHuman } from "../../../lib/time";
+import { getCssAccentColor } from "../../../lib/accentColor";
+
+function accentAlpha(color: string, alpha: number): string {
+  return color.replace("rgb(", "rgba(").replace(")", `, ${alpha})`);
+}
 
 type WeeklyHoursChartProps = {
   days: number;
@@ -29,15 +34,16 @@ export function WeeklyHoursChart({
     monthMode === true,
     weekMode === true,
   );
-  const { theme, colorMode } = useTheme();
-  const isRose = theme === "rose";
+  const { colorMode } = useTheme();
   const isLight = colorMode === "light";
 
   const tickColor = isLight ? "#4a4a56" : "#9ca3af";
   const tooltipBg = isLight ? "#f0f1f4" : "#020617";
   const tooltipBorder = isLight ? "rgba(0,0,0,0.14)" : "#4b5563";
   const tooltipLabel = isLight ? "#17171a" : "#e5e7eb";
-  const tooltipItem = isRose ? "#db2777" : isLight ? "#b45309" : "#fbbf24";
+  const tooltipItem = getCssAccentColor(isLight ? "if-accent-strong" : "if-accent-muted");
+  const barFill = tooltipItem;
+  const cursorFill = accentAlpha(getCssAccentColor("if-accent"), 0.08);
 
   return (
     <div className="relative h-full rounded-xl border border-neutral-800/70 bg-neutral-950/50 px-2 py-2 ring-1 ring-white/[0.02]">
@@ -64,9 +70,7 @@ export function WeeklyHoursChart({
           />
           <Tooltip
             cursor={{
-              fill: isRose
-                ? "rgba(244, 114, 182, 0.08)"
-                : "rgba(250, 204, 21, 0.08)",
+              fill: cursorFill,
             }}
             contentStyle={{
               backgroundColor: tooltipBg,
@@ -83,7 +87,7 @@ export function WeeklyHoursChart({
           />
           <Bar
             dataKey="minutes"
-            fill={isRose ? "#db2777" : isLight ? "#d97706" : "#fbbf24"}
+            fill={barFill}
             radius={[4, 4, 0, 0]}
             maxBarSize={28}
           />

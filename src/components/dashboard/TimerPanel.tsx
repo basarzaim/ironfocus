@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useAppState } from "../../state/AppStateProvider";
 import { useFocusTimerContext } from "../../features/timer/TimerProvider";
-import { useTheme } from "../../state/ThemeProvider";
 import { formatMinutesHuman, parseTimeToDate } from "../../lib/time";
 import { shouldPlayFocusAutoCompleteNotify } from "../../lib/focusCompletionNotificationDedup";
 import { loadUserPreferences } from "../../lib/userPreferences";
+import { getPersistedValue, setPersistedValue } from "../../lib/persistence/persistenceClient";
 import { STORAGE_KEYS } from "../../lib/storageKeys";
 import { LivingCore } from "../../features/timer/components/LivingCore";
 import { PlasmaCore } from "../../features/timer/components/PlasmaCore";
@@ -48,7 +48,7 @@ const SHOW_DEV_TOOLS = import.meta.env.DEV;
 function getInitialCoreVariant(): CoreVariant {
   if (!SHOW_DEV_TOOLS) return "ironcore";
   if (typeof window === "undefined") return "ironcore";
-  const raw = window.localStorage.getItem(STORAGE_KEYS.coreVariantPreview);
+  const raw = getPersistedValue(STORAGE_KEYS.coreVariantPreview);
   const stored = CORE_VARIANTS.find((variant) => variant.id === raw && variant.visible !== false);
   return stored?.id ?? "ironcore";
 }
@@ -61,7 +61,7 @@ type TimerPanelProps = {
 
 function getInitialPlannedMinutes(): number | null {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(STORAGE_KEYS.timerPlannedMinutes);
+  const raw = getPersistedValue(STORAGE_KEYS.timerPlannedMinutes);
   if (!raw) return null;
   const parsed = Number.parseInt(raw, 10);
   if (Number.isNaN(parsed)) return null;
@@ -120,9 +120,6 @@ export function TimerPanel({
   const displayLabel = showPlannedTime
     ? formatPlannedTime(plannedMinutes)
     : timer.displayTime;
-
-  const { theme } = useTheme();
-  const isRose = theme === "rose";
 
   function playSingleBeep() {
     if (typeof window === "undefined") return;
@@ -298,23 +295,23 @@ export function TimerPanel({
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (plannedMinutes && plannedMinutes > 0) {
-      window.localStorage.setItem(
+      setPersistedValue(
         STORAGE_KEYS.timerPlannedMinutes,
         String(plannedMinutes),
       );
     } else {
-      window.localStorage.removeItem(STORAGE_KEYS.timerPlannedMinutes);
+      setPersistedValue(STORAGE_KEYS.timerPlannedMinutes, "");
     }
   }, [plannedMinutes]);
 
   useEffect(() => {
     if (!SHOW_DEV_TOOLS || typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEYS.coreVariantPreview, coreVariant);
+    setPersistedValue(STORAGE_KEYS.coreVariantPreview, coreVariant);
   }, [coreVariant]);
 
   useEffect(() => {
     if (!SHOW_DEV_TOOLS || typeof window === "undefined") return;
-    window.localStorage.setItem(
+    setPersistedValue(
       STORAGE_KEYS.coreGrowthPreview,
       growthPreview ? "1" : "0",
     );
@@ -411,10 +408,8 @@ export function TimerPanel({
     "inline-flex rounded-xl border border-neutral-700/90 bg-neutral-950/80 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]";
   const segmentBtnBase =
     "min-h-[40px] min-w-[108px] rounded-lg px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-200";
-  const segmentActiveRose =
-    "bg-pink-500 text-white shadow-md shadow-pink-950/40 ring-1 ring-pink-400/30";
-  const segmentActiveClassic =
-    "bg-amber-500 text-neutral-950 shadow-md shadow-amber-950/30 ring-1 ring-amber-400/40";
+  const segmentActive =
+    "bg-[rgb(var(--if-accent-rgb))] text-[var(--if-accent-on)] shadow-md shadow-[rgb(var(--if-accent-rgb)/35%)] ring-1 ring-[rgb(var(--if-accent-rgb)/40%)]";
   const segmentInactive =
     "text-neutral-500 hover:bg-neutral-800/60 hover:text-neutral-200";
   const segmentLocked = "cursor-not-allowed text-neutral-600 opacity-50 hover:bg-transparent hover:text-neutral-600";
@@ -425,9 +420,14 @@ export function TimerPanel({
   const segmentBtnBaseDashboard =
     "min-h-[34px] min-w-[94px] rounded-full px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-all duration-200";
 
-  const focusModeEnterClass = isRose
-    ? "border-pink-500/30 bg-pink-500/10 text-pink-200 ring-1 ring-inset ring-pink-400/10 hover:border-pink-400/50 hover:bg-pink-500/20 hover:text-pink-100"
-    : "border-amber-500/30 bg-amber-500/10 text-amber-200 ring-1 ring-inset ring-amber-400/10 hover:border-amber-400/50 hover:bg-amber-500/20 hover:text-amber-100";
+  const focusModeEnterClass =
+    "border-[rgb(var(--if-accent-rgb)/30%)] bg-[rgb(var(--if-accent-rgb)/10%)] text-[rgb(var(--if-accent-light-rgb))] ring-1 ring-inset ring-[rgb(var(--if-accent-light-rgb)/10%)] hover:border-[rgb(var(--if-accent-light-rgb)/50%)] hover:bg-[rgb(var(--if-accent-rgb)/20%)] hover:text-[rgb(var(--if-accent-light-rgb))]";
+
+  const accentFocusBorder = "focus:border-[rgb(var(--if-accent-rgb)/70%)]";
+  const accentSaveBtn =
+    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-strong-rgb)/80%)] text-[var(--if-accent-on)] hover:bg-[rgb(var(--if-accent-rgb))]";
+  const accentPrimaryBtn =
+    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-rgb))] text-[var(--if-accent-on)] shadow-md shadow-[rgb(var(--if-accent-rgb)/30%)] ring-1 ring-[rgb(var(--if-accent-rgb)/40%)] hover:bg-[rgb(var(--if-accent-light-rgb))]";
 
   const focusModeExitClass =
     "border-neutral-600 bg-neutral-900/90 text-neutral-100 shadow-md shadow-black/25 ring-1 ring-white/5 hover:border-neutral-500 hover:bg-neutral-800 hover:text-white";
@@ -448,18 +448,10 @@ export function TimerPanel({
           <div className="mx-auto flex max-w-5xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border bg-neutral-900/90 ${
-                  isRose
-                    ? "border-pink-500/35 shadow-[inset_0_0_0_1px_rgba(236,72,153,0.12)]"
-                    : "border-amber-500/35 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.12)]"
-                }`}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[rgb(var(--if-accent-rgb)/35%)] bg-neutral-900/90 shadow-[inset_0_0_0_1px_rgb(var(--if-accent-rgb)/0.12)]"
                 aria-hidden
               >
-                <span
-                  className={`h-2.5 w-2.5 rounded-full ${
-                    isRose ? "bg-pink-400 shadow-[0_0_12px_rgba(244,114,182,0.65)]" : "bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.55)]"
-                  }`}
-                />
+                <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--if-accent-light-rgb))] shadow-[0_0_12px_rgb(var(--if-accent-light-rgb)/0.6)]" />
               </div>
               <div className="min-w-0 text-left">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-neutral-500">
@@ -484,9 +476,7 @@ export function TimerPanel({
                   }}
                   className={`${segmentBtnBase} ${
                     uiMode === "timer"
-                      ? isRose
-                        ? segmentActiveRose
-                        : segmentActiveClassic
+                      ? segmentActive
                       : timer.isRunning || timer.sessionReadyToLog
                         ? segmentLocked
                         : segmentInactive
@@ -502,9 +492,7 @@ export function TimerPanel({
                   }}
                   className={`${segmentBtnBase} ${
                     uiMode === "stopwatch"
-                      ? isRose
-                        ? segmentActiveRose
-                        : segmentActiveClassic
+                      ? segmentActive
                       : timer.isRunning || timer.sessionReadyToLog
                         ? segmentLocked
                         : segmentInactive
@@ -569,7 +557,7 @@ export function TimerPanel({
                       onChange={(e) => setLogTitle(e.target.value)}
                       placeholder="Focus session"
                       className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                        isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                        accentFocusBorder
                       }`}
                     />
                   </div>
@@ -581,7 +569,7 @@ export function TimerPanel({
                       value={logCategoryId}
                       onChange={(e) => setLogCategoryId(e.target.value)}
                       className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none ${
-                        isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                        accentFocusBorder
                       }`}
                     >
                       <option value="">Select category</option>
@@ -602,9 +590,7 @@ export function TimerPanel({
                     value={logNotes}
                     onChange={(e) => setLogNotes(e.target.value)}
                     placeholder="Notes"
-                    className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                      isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
-                    }`}
+                    className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${accentFocusBorder}`}
                   />
                 </div>
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -612,11 +598,7 @@ export function TimerPanel({
                     type="button"
                     onClick={handleConvertToLog}
                     disabled={!canConvert}
-                    className={`inline-flex flex-1 items-center justify-center rounded-md border px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${
-                      isRose
-                        ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
-                        : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500"
-                    }`}
+                    className={`inline-flex flex-1 items-center justify-center rounded-md border px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${accentSaveBtn}`}
                   >
                     Save log
                   </button>
@@ -660,9 +642,7 @@ export function TimerPanel({
                     disabled={isSessionDone}
                     className={`inline-flex min-w-[152px] items-center justify-center rounded-xl border px-7 py-3.5 text-[11px] font-bold uppercase tracking-[0.18em] shadow-lg transition disabled:cursor-not-allowed disabled:border-neutral-700 disabled:bg-neutral-900/70 disabled:text-neutral-500 ${
                       timer.isRunning
-                        ? isRose
-                          ? "border-pink-500/60 bg-pink-500 text-white shadow-md shadow-pink-950/30 ring-1 ring-pink-400/30 hover:bg-pink-400"
-                          : "border-amber-500/60 bg-amber-500 text-neutral-950 shadow-md shadow-amber-950/30 ring-1 ring-amber-400/40 hover:bg-amber-400"
+                        ? accentPrimaryBtn
                         : "border-neutral-500/80 bg-neutral-50 text-neutral-950 shadow-lg shadow-black/25 ring-1 ring-white/20 hover:bg-white"
                     }`}
                   >
@@ -695,7 +675,7 @@ export function TimerPanel({
                           onChange={(e) => setLogTitle(e.target.value)}
                           placeholder="Focus session"
                           className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                            isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                            accentFocusBorder
                           }`}
                         />
                       </div>
@@ -707,7 +687,7 @@ export function TimerPanel({
                           value={logCategoryId}
                           onChange={(e) => setLogCategoryId(e.target.value)}
                           className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none ${
-                            isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                            accentFocusBorder
                           }`}
                         >
                           <option value="">Select category</option>
@@ -729,7 +709,7 @@ export function TimerPanel({
                         onChange={(e) => setLogNotes(e.target.value)}
                         placeholder="Notes"
                         className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                          isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
+                          accentFocusBorder
                         }`}
                       />
                     </div>
@@ -738,11 +718,7 @@ export function TimerPanel({
                         type="button"
                         onClick={handleConvertToLog}
                         disabled={!canConvert}
-                        className={`inline-flex flex-1 items-center justify-center rounded-md border px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${
-                          isRose
-                            ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
-                            : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500"
-                        }`}
+                        className={`inline-flex flex-1 items-center justify-center rounded-md border px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${accentSaveBtn}`}
                       >
                         Save log
                       </button>
@@ -853,9 +829,7 @@ export function TimerPanel({
               }}
               className={`${segmentBtnBaseDashboard} ${
                 uiMode === "timer"
-                  ? isRose
-                    ? segmentActiveRose
-                    : segmentActiveClassic
+                  ? segmentActive
                   : hasActiveSession
                     ? segmentLocked
                     : segmentInactive
@@ -871,9 +845,7 @@ export function TimerPanel({
               }}
               className={`${segmentBtnBaseDashboard} ${
                 uiMode === "stopwatch"
-                  ? isRose
-                    ? segmentActiveRose
-                    : segmentActiveClassic
+                  ? segmentActive
                   : hasActiveSession
                     ? segmentLocked
                     : segmentInactive
@@ -913,9 +885,7 @@ export function TimerPanel({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div
-                className={`flex h-7 w-7 items-center justify-center rounded-full text-sm ${
-                  isRose ? "bg-pink-600/60 text-pink-100" : "bg-amber-500/70 text-neutral-950"
-                }`}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgb(var(--if-accent-rgb)/70%)] text-sm text-[var(--if-accent-on)]"
               >
                 ✓
               </div>
@@ -951,9 +921,7 @@ export function TimerPanel({
               disabled={hasActiveSession}
               className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none ${
                 hasActiveSession ? "cursor-not-allowed opacity-60" : ""
-              } ${
-                isRose ? "focus:border-pink-500/70" : "focus:border-amber-500/70"
-              }`}
+              } ${accentFocusBorder}`}
             >
               <option value="">None</option>
               {categories.map((cat) => (
@@ -996,9 +964,7 @@ export function TimerPanel({
           <div
             className={`relative z-10 text-[11px] font-medium uppercase tracking-[0.25em] ${
               timer.isRunning
-                ? isRose
-                  ? "text-pink-300/90"
-                  : "text-amber-300/90"
+                ? "text-[rgb(var(--if-accent-light-rgb)/90%)]"
                 : "text-neutral-500"
             }`}
           >
@@ -1012,9 +978,7 @@ export function TimerPanel({
               disabled={isSessionDone}
               className={`inline-flex min-w-[150px] items-center justify-center rounded-full border px-8 py-3 text-xs font-bold uppercase tracking-[0.18em] shadow-lg transition disabled:cursor-not-allowed disabled:border-neutral-700 disabled:bg-neutral-900/70 disabled:text-neutral-500 ${
                 timer.isRunning
-                  ? isRose
-                    ? "border-pink-500/60 bg-pink-500 text-white shadow-md shadow-pink-950/30 ring-1 ring-pink-400/30 hover:bg-pink-400"
-                    : "border-amber-500/60 bg-amber-500 text-neutral-950 shadow-md shadow-amber-950/30 ring-1 ring-amber-400/40 hover:bg-amber-400"
+                  ? accentPrimaryBtn
                   : "border-neutral-500/70 bg-neutral-50/95 text-neutral-950 ring-1 ring-white/10 hover:bg-white"
               }`}
             >
@@ -1051,11 +1015,7 @@ export function TimerPanel({
                     title={variant.hint}
                     onClick={() => setCoreVariant(variant.id)}
                     className={`${segmentBtnBaseDashboard} ${
-                      coreVariant === variant.id
-                        ? isRose
-                          ? segmentActiveRose
-                          : segmentActiveClassic
-                        : segmentInactive
+                      coreVariant === variant.id ? segmentActive : segmentInactive
                     }`}
                   >
                     {variant.label}
@@ -1096,12 +1056,8 @@ export function TimerPanel({
                   uiMode === "stopwatch" || hasActiveSession
                     ? "cursor-not-allowed border-neutral-800 bg-neutral-900 text-neutral-600 opacity-60"
                     : plannedMinutes === m
-                      ? isRose
-                        ? "border-pink-500 bg-pink-500/15 text-pink-300"
-                        : "border-amber-500 bg-amber-500/15 text-amber-300"
-                      : isRose
-                        ? "border-neutral-700 bg-neutral-900 text-neutral-200 hover:border-pink-500 hover:text-pink-300"
-                        : "border-neutral-700 bg-neutral-900 text-neutral-200 hover:border-amber-600 hover:text-amber-400"
+                      ? "border-[rgb(var(--if-accent-rgb))] bg-[rgb(var(--if-accent-rgb)/15%)] text-[rgb(var(--if-accent-light-rgb))]"
+                      : "border-neutral-700 bg-neutral-900 text-neutral-200 hover:border-[rgb(var(--if-accent-rgb))] hover:text-[rgb(var(--if-accent-light-rgb))]"
                 }`}
               >
                 {m} min
@@ -1131,11 +1087,7 @@ export function TimerPanel({
                 value={logTitle}
                 onChange={(e) => setLogTitle(e.target.value)}
                 placeholder="Focus session"
-                className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-2 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                  isRose
-                    ? "focus:border-pink-500/70"
-                    : "focus:border-amber-500/70"
-                }`}
+                className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-2 py-1.5 text-xs text-neutral-100 outline-none placeholder:text-neutral-600 ${accentFocusBorder}`}
               />
             </div>
             <div className="space-y-1.5">
@@ -1145,11 +1097,7 @@ export function TimerPanel({
               <select
                 value={logCategoryId}
                 onChange={(e) => setLogCategoryId(e.target.value)}
-                className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-2 py-1.5 text-[11px] text-neutral-100 outline-none ${
-                  isRose
-                    ? "focus:border-pink-500/70"
-                    : "focus:border-amber-500/70"
-                }`}
+                className={`w-full rounded-md border border-neutral-800 bg-neutral-950/60 px-2 py-1.5 text-[11px] text-neutral-100 outline-none ${accentFocusBorder}`}
               >
                 <option value="">Select</option>
                 {categories.map((cat) => (
@@ -1166,21 +1114,13 @@ export function TimerPanel({
               value={logNotes}
               onChange={(e) => setLogNotes(e.target.value)}
               placeholder="Notes (optional)"
-              className={`flex-1 rounded-md border border-neutral-800 bg-neutral-950/60 px-2 py-1.5 text-[11px] text-neutral-100 outline-none placeholder:text-neutral-600 ${
-                isRose
-                  ? "focus:border-pink-500/70"
-                  : "focus:border-amber-500/70"
-              }`}
+              className={`flex-1 rounded-md border border-neutral-800 bg-neutral-950/60 px-2 py-1.5 text-[11px] text-neutral-100 outline-none placeholder:text-neutral-600 ${accentFocusBorder}`}
             />
             <button
               type="button"
               onClick={handleConvertToLog}
               disabled={!canConvert}
-              className={`inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${
-                isRose
-                  ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
-                  : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500"
-              }`}
+              className={`inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] shadow-sm transition-colors disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900 disabled:text-neutral-600 ${accentSaveBtn}`}
             >
               Save Log
             </button>

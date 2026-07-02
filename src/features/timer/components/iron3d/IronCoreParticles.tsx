@@ -15,6 +15,8 @@ import {
 } from "three";
 import type { RefObject } from "react";
 import { resolveAuraDepthGate, type IronVisualFrame } from "../../iron/ironVisualState";
+import { getIronThemePalette } from "../../iron/ironThemePalettes";
+import { useTheme } from "../../../../state/ThemeProvider";
 
 const DUST_COUNT = 180;
 const EMBER_COUNT = 96;
@@ -167,6 +169,13 @@ interface IronCoreParticlesProps {
 }
 
 export function IronCoreParticles({ frameRef, reduced }: IronCoreParticlesProps) {
+  const { accentId } = useTheme();
+  const baseHue = useMemo(() => {
+    const hsl = { h: 0, s: 0, l: 0 };
+    new Color(getIronThemePalette(accentId).orange).getHSL(hsl);
+    return hsl.h;
+  }, [accentId]);
+
   const dustRef = useRef<PointsType>(null);
   const emberRef = useRef<PointsType>(null);
   const dustState = useRef(Array.from({ length: DUST_COUNT }, mkDust));
@@ -246,7 +255,7 @@ export function IronCoreParticles({ frameRef, reduced }: IronCoreParticlesProps)
       const depthFade = resolveViewDepthFade(x, y, z, dustRef.current, camInv);
       const radialDepth = clamp01((wobbleR - 0.95) / 0.85);
       const fade = clamp01(intensity * p.warmth * 1.15 * depthFade * (0.55 + radialDepth * 0.55));
-      const c = new Color().setHSL(0.09 + p.warmth * 0.04, 0.38, 0.24 + fade * 0.2);
+      const c = new Color().setHSL(baseHue + 0.02 + p.warmth * 0.04, 0.38, 0.24 + fade * 0.2);
       dustCol[i3] = c.r * fade;
       dustCol[i3 + 1] = c.g * fade;
       dustCol[i3 + 2] = c.b * fade;
@@ -295,7 +304,7 @@ export function IronCoreParticles({ frameRef, reduced }: IronCoreParticlesProps)
       const fade = clamp01(
         intensity * p.warmth * lifeFade * 1.2 * depthFade * (0.5 + radialDepth * 0.65),
       );
-      const c = new Color().setHSL(0.07 + p.warmth * 0.05, 0.88, 0.48 + fade * 0.28);
+      const c = new Color().setHSL(baseHue + p.warmth * 0.05, 0.88, 0.48 + fade * 0.28);
       emberCol[i3] = c.r * fade;
       emberCol[i3 + 1] = c.g * fade;
       emberCol[i3 + 2] = c.b * fade * 0.35;

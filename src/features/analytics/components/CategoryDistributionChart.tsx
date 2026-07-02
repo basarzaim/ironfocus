@@ -15,8 +15,13 @@ import { useTheme } from "../../../state/ThemeProvider";
 import type { LogEntry } from "../../../types/models";
 import { getCategoryDistribution } from "../../../lib/analytics";
 import { formatMinutesHuman } from "../../../lib/time";
+import { getCssAccentColor } from "../../../lib/accentColor";
 
 const FALLBACK_COLORS = ["#ec4899", "#f97316", "#22d3ee", "#a855f7", "#4ade80"];
+
+function accentAlpha(color: string, alpha: number): string {
+  return color.replace("rgb(", "rgba(").replace(")", `, ${alpha})`);
+}
 
 type CategoryDistributionChartProps = {
   logsOverride?: LogEntry[];
@@ -30,19 +35,18 @@ export function CategoryDistributionChart({
     "vertical",
   );
   const { logs: contextLogs, categories } = useAppState();
-  const { theme, colorMode } = useTheme();
-  const isRose = theme === "rose";
+  const { colorMode } = useTheme();
   const isLight = colorMode === "light";
 
   const tickColor = isLight ? "#4a4a56" : "#9ca3af";
   const tooltipBg = isLight ? "#f0f1f4" : "#020617";
   const tooltipBorder = isLight ? "rgba(0,0,0,0.14)" : "#4b5563";
   const tooltipLabel = isLight ? "#17171a" : "#e5e7eb";
-  const tooltipItem = isRose ? "#db2777" : isLight ? "#b45309" : "#fbbf24";
+  const tooltipItem = getCssAccentColor(isLight ? "if-accent-strong" : "if-accent-muted");
   const pieStroke = isLight ? "#e8eaee" : "#020617";
-  const barToggleHover = isRose
-    ? "hover:border-pink-500 hover:text-pink-300"
-    : "hover:border-amber-500 hover:text-amber-300";
+  const cursorFill = accentAlpha(getCssAccentColor("if-accent-strong"), 0.08);
+  const barToggleHover =
+    "hover:border-[rgb(var(--if-accent-rgb))] hover:text-[rgb(var(--if-accent-light-rgb))]";
   const logs = logsOverride ?? contextLogs;
   const data = getCategoryDistribution(logs, categories);
 
@@ -54,9 +58,8 @@ export function CategoryDistributionChart({
         : FALLBACK_COLORS[index % FALLBACK_COLORS.length],
   }));
 
-  const segmentActive = isRose
-    ? "bg-pink-500/15 text-pink-300 ring-1 ring-pink-500/30"
-    : "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30";
+  const segmentActive =
+    "bg-[rgb(var(--if-accent-rgb)/15%)] text-[rgb(var(--if-accent-light-rgb))] ring-1 ring-[rgb(var(--if-accent-rgb)/30%)]";
 
   return (
     <div className="flex h-full flex-col rounded-xl border border-neutral-800/70 bg-neutral-950/50 px-2 py-2 ring-1 ring-white/[0.02]">
@@ -152,9 +155,7 @@ export function CategoryDistributionChart({
               )}
               <Tooltip
                 cursor={{
-                  fill: isRose
-                    ? "rgba(219, 39, 119, 0.08)"
-                    : "rgba(217, 119, 6, 0.08)",
+                  fill: cursorFill,
                 }}
                 contentStyle={{
                   backgroundColor: tooltipBg,

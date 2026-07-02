@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAppState } from "../../state/AppStateProvider";
-import { useTheme } from "../../state/ThemeProvider";
+import { getCssAccentColor } from "../../lib/accentColor";
 
 export function CategoriesPanel() {
   const {
@@ -15,17 +15,12 @@ export function CategoriesPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const { theme } = useTheme();
-  const isRose = theme === "rose";
 
   const canAdd = newName.trim().length > 0;
 
-  const accentFocus = isRose
-    ? "focus:border-pink-500/70"
-    : "focus:border-amber-500/70";
-  const accentBtn = isRose
-    ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
-    : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500";
+  const accentFocus = "focus:border-[rgb(var(--if-accent-rgb)/70%)]";
+  const accentBtn =
+    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-strong-rgb)/80%)] text-[var(--if-accent-on)] hover:bg-[rgb(var(--if-accent-rgb))]";
   const fieldClass = `rounded-lg border border-neutral-800/80 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none transition-colors placeholder:text-neutral-600 ${accentFocus}`;
 
   function startEdit(id: string, name: string) {
@@ -99,11 +94,7 @@ export function CategoriesPanel() {
         <div className="min-h-0 flex-1 overflow-auto">
           {categories.length === 0 ? (
             <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-neutral-800/80 bg-neutral-950/30 px-6 text-center">
-              <div
-                className={`flex h-11 w-11 items-center justify-center rounded-xl border border-neutral-800/80 bg-neutral-950/50 ${
-                  isRose ? "text-pink-400/70" : "text-amber-400/70"
-                }`}
-              >
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-neutral-800/80 bg-neutral-950/50 text-[rgb(var(--if-accent-light-rgb)/70%)]">
                 <svg
                   viewBox="0 0 24 24"
                   className="h-5 w-5"
@@ -130,7 +121,7 @@ export function CategoriesPanel() {
               onMouseUp={() => setDraggingId(null)}
             >
               {categories.map((cat) => {
-                const swatch = cat.color ?? (isRose ? "#ec4899" : "#fbbf24");
+                const swatch = cat.color ?? getCssAccentColor("if-accent");
 
                 return (
                   <li

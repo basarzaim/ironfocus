@@ -20,6 +20,7 @@ import {
   VORONOI_BAKE_URL,
 } from "../../iron/ironCoreTexture";
 import { resolveShellLevel } from "../../iron/ironShellLevels";
+import { useTheme } from "../../../../state/ThemeProvider";
 import {
   type IronAnimState,
   type IronCoreStatus,
@@ -42,7 +43,8 @@ useTexture.preload(VORONOI_BAKE_URL);
 interface IronCoreRigProps {
   timerRef: RefObject<IronTimerInput>;
   frameRef: RefObject<IronVisualFrame | null>;
-  reduced: boolean;
+  reducedMotion: boolean;
+  lowQuality: boolean;
 }
 
 function stripVertexColors(mesh: Mesh): void {
@@ -58,7 +60,12 @@ function shellRpm(status: IronCoreStatus): number {
   return IRON_SCENE_TUNING.shellSpin[status];
 }
 
-export function IronCoreRig({ timerRef, frameRef, reduced }: IronCoreRigProps) {
+export function IronCoreRig({
+  timerRef,
+  frameRef,
+  reducedMotion,
+  lowQuality,
+}: IronCoreRigProps) {
   const rootRef = useRef<Group>(null);
   const modelGroupRef = useRef<Group>(null);
   const shellMeshesRef = useRef<Map<number, Mesh>>(new Map());
@@ -69,10 +76,11 @@ export function IronCoreRig({ timerRef, frameRef, reduced }: IronCoreRigProps) {
 
   const animRef = useRef<IronAnimState>({ t: 0, coreScale: CORE_BASE_SCALE, precession: 0 });
 
+  const { accentId } = useTheme();
   const { scene: shellScene } = useGLTF(SHELL_MODEL_URL);
   const { scene: coreScene } = useGLTF(CORE_MODEL_URL);
   const voronoiTex = useTexture(VORONOI_BAKE_URL);
-  const coreShaderMat = useIronCoreShaderMaterial(voronoiTex);
+  const coreShaderMat = useIronCoreShaderMaterial(voronoiTex, accentId);
 
   const shellMaterial = useMemo(() => {
     const t = IRON_SCENE_TUNING.shell;
@@ -144,7 +152,7 @@ export function IronCoreRig({ timerRef, frameRef, reduced }: IronCoreRigProps) {
     const input = timerRef.current;
     if (!input) return;
 
-    const frame = stepIronVisual(animRef.current, input, dt, reduced);
+    const frame = stepIronVisual(animRef.current, input, dt, reducedMotion);
     frameRef.current = frame;
 
     const breathMul =
@@ -165,7 +173,7 @@ export function IronCoreRig({ timerRef, frameRef, reduced }: IronCoreRigProps) {
       }
     }
 
-    if (!reduced && modelGroupRef.current) {
+    if (!reducedMotion && modelGroupRef.current) {
       const rpm = shellRpm(frame.status);
       shellSpinRef.current += (delta * Math.PI * 2 * rpm) / 60;
       modelGroupRef.current.rotation.y = shellSpinRef.current;
@@ -183,6 +191,7 @@ export function IronCoreRig({ timerRef, frameRef, reduced }: IronCoreRigProps) {
           veinUvScale: resolveVeinDetailScale(frame.depthParam),
         },
         frame.ironHeat,
+        accentId,
       );
     }
   });
@@ -190,12 +199,12 @@ export function IronCoreRig({ timerRef, frameRef, reduced }: IronCoreRigProps) {
   return (
     <group ref={rootRef}>
       {rig && <primitive ref={modelGroupRef} object={rig.group} />}
-      {rig && (
+      {rig && !lowQuality ? (
         <>
-          <IronCoreHaze frameRef={frameRef} reduced={reduced} />
-          <IronCoreParticles frameRef={frameRef} reduced={reduced} />
+          <IronCoreHaze frameRef={frameRef} reduced={reducedMotion} />
+          <IronCoreParticles frameRef={frameRef} reduced={reducedMotion} />
         </>
-      )}
+      ) : null}
     </group>
   );
 }

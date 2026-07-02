@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { markOnboardingCompleted } from "../../lib/onboarding";
-import { useTheme } from "../../state/ThemeProvider";
 
 const STEPS = [
   {
@@ -23,16 +22,13 @@ type OnboardingModalProps = {
 };
 
 export function OnboardingModal({ open, onClose }: OnboardingModalProps) {
-  const { theme } = useTheme();
-  const isRose = theme === "rose";
   const [step, setStep] = useState(0);
 
   if (!open) return null;
 
   const isLast = step >= STEPS.length - 1;
-  const accentBtn = isRose
-    ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
-    : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500";
+  const accentBtn =
+    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-strong-rgb)/80%)] text-[var(--if-accent-on)] hover:bg-[rgb(var(--if-accent-rgb))]";
 
   function finish() {
     markOnboardingCompleted();

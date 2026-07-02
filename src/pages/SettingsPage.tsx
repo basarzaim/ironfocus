@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { PRODUCT_INFO } from "../config/productInfo";
 import { useTheme } from "../state/ThemeProvider";
+import { AccentSection } from "../components/settings/AccentSection";
+import { AppearanceSection } from "../components/settings/AppearanceSection";
 import { DataManagementSection } from "../components/settings/DataManagementSection";
 import { NotificationsSection } from "../components/settings/NotificationsSection";
 import { SupportSection } from "../components/settings/SupportSection";
@@ -32,8 +34,7 @@ function SettingsSection({
 }
 
 export function SettingsPage({ onReplayOnboarding }: SettingsPageProps) {
-  const { theme, setTheme, colorMode, setColorMode } = useTheme();
-  const isRose = theme === "rose";
+  const { colorMode, setColorMode } = useTheme();
   const isLight = colorMode === "light";
 
   return (
@@ -79,33 +80,7 @@ export function SettingsPage({ onReplayOnboarding }: SettingsPageProps) {
             description="Accent theme and color mode (stored locally)."
           >
             <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-semibold text-neutral-300">Accent theme</span>
-                <div className="inline-flex rounded-full border border-neutral-700 bg-neutral-950/60 p-[2px] text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => setTheme("classic")}
-                    className={`rounded-full px-3 py-1 ${
-                      !isRose
-                        ? "bg-neutral-200 text-neutral-900"
-                        : "text-neutral-400 hover:text-neutral-100"
-                    }`}
-                  >
-                    Classic
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTheme("rose")}
-                    className={`rounded-full px-3 py-1 ${
-                      isRose
-                        ? "bg-pink-500/90 text-neutral-50"
-                        : "text-neutral-400 hover:text-neutral-100"
-                    }`}
-                  >
-                    Rose
-                  </button>
-                </div>
-              </div>
+              <AccentSection />
               <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-neutral-300">Color mode</span>
                 <div className="inline-flex rounded-full border border-neutral-700 bg-neutral-950/60 p-[2px] text-[11px]">
@@ -133,6 +108,7 @@ export function SettingsPage({ onReplayOnboarding }: SettingsPageProps) {
                   </button>
                 </div>
               </div>
+              <AppearanceSection />
             </div>
           </SettingsSection>
 

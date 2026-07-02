@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useAppState } from "../../state/AppStateProvider";
-import { useTheme } from "../../state/ThemeProvider";
 import type { LogEntry } from "../../types/models";
 import { getDeepWorkMinutes, getTodayTotalMinutes } from "../../lib/analytics";
 import { formatMinutesHuman } from "../../lib/time";
@@ -16,19 +15,14 @@ type StatCardProps = {
   value: string;
   hint: string;
   accent?: "today" | "period" | "deep";
-  isRose: boolean;
 };
 
-function StatCard({ label, value, hint, accent, isRose }: StatCardProps) {
+function StatCard({ label, value, hint, accent }: StatCardProps) {
   const accentBar =
     accent === "today"
-      ? isRose
-        ? "from-pink-500/80 to-pink-500/0"
-        : "from-amber-500/80 to-amber-500/0"
+      ? "from-[rgb(var(--if-accent-rgb)/80%)] to-[rgb(var(--if-accent-rgb)/0%)]"
       : accent === "deep"
-        ? isRose
-          ? "from-pink-400/60 to-pink-400/0"
-          : "from-amber-400/60 to-amber-400/0"
+        ? "from-[rgb(var(--if-accent-light-rgb)/60%)] to-[rgb(var(--if-accent-light-rgb)/0%)]"
         : "from-neutral-500/50 to-neutral-500/0";
 
   return (
@@ -54,8 +48,6 @@ export function StatsCards({
   periodLabel,
 }: StatsCardsProps) {
   const { logs: contextLogs } = useAppState();
-  const { theme } = useTheme();
-  const isRose = theme === "rose";
 
   const todayMinutes = useMemo(() => {
     return getTodayTotalMinutes(todayLogsOverride ?? contextLogs);
@@ -79,21 +71,18 @@ export function StatsCards({
         value={formatMinutesHuman(todayMinutes)}
         hint="Focused work so far"
         accent="today"
-        isRose={isRose}
       />
       <StatCard
         label={periodTitle}
         value={formatMinutesHuman(periodMinutes)}
         hint="All categories in range"
         accent="period"
-        isRose={isRose}
       />
       <StatCard
         label="Deep work"
         value={formatMinutesHuman(deepMinutes)}
         hint="Sessions ≥ 60 minutes"
         accent="deep"
-        isRose={isRose}
       />
     </section>
   );

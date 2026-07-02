@@ -2,15 +2,12 @@ import { useMemo, useState } from "react";
 import { useAppState } from "../state/AppStateProvider";
 import { formatMinutesHuman } from "../lib/time";
 import { QuickLogPanel } from "../components/dashboard/QuickLogPanel";
-import { useTheme } from "../state/ThemeProvider";
 
 type SortKey = "date_desc" | "date_asc" | "duration_desc" | "duration_asc";
 type RangeKey = "all" | "today" | "week" | "month";
 
 export function LogsPage() {
   const { logs, categories, deleteLog, updateLogFromForm } = useAppState();
-  const { theme } = useTheme();
-  const isRose = theme === "rose";
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("date_desc");
@@ -190,24 +187,18 @@ export function LogsPage() {
     return { count: filteredLogs.length, totalMinutes };
   }, [filteredLogs]);
 
-  const accentFocus = isRose
-    ? "focus:border-pink-500/70"
-    : "focus:border-amber-500/70";
-  const accentRing = isRose ? "ring-pink-500/40" : "ring-amber-500/40";
-  const accentBg = isRose
-    ? "bg-pink-500/15 text-pink-300"
-    : "bg-amber-500/15 text-amber-300";
-  const accentBtn = isRose
-    ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
-    : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500";
-  const accentNavHover = isRose
-    ? "hover:border-pink-500/50 hover:text-pink-300"
-    : "hover:border-amber-500/50 hover:text-amber-400";
+  const accentFocus = "focus:border-[rgb(var(--if-accent-rgb)/70%)]";
+  const accentRing = "ring-[rgb(var(--if-accent-rgb)/40%)]";
+  const accentBg =
+    "bg-[rgb(var(--if-accent-rgb)/15%)] text-[rgb(var(--if-accent-light-rgb))]";
+  const accentBtn =
+    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-strong-rgb)/80%)] text-[var(--if-accent-on)] hover:bg-[rgb(var(--if-accent-rgb))]";
+  const accentNavHover =
+    "hover:border-[rgb(var(--if-accent-rgb)/50%)] hover:text-[rgb(var(--if-accent-light-rgb))]";
   const segmentTrack =
     "inline-flex items-center gap-0.5 rounded-full border border-neutral-800/80 bg-neutral-950/50 p-1 backdrop-blur-sm";
-  const segmentActive = isRose
-    ? "bg-pink-500 text-white shadow-sm shadow-pink-950/30 ring-1 ring-pink-400/30"
-    : "bg-amber-500 text-neutral-950 shadow-sm shadow-amber-950/30 ring-1 ring-amber-400/40";
+  const segmentActive =
+    "bg-[rgb(var(--if-accent-rgb))] text-[var(--if-accent-on)] shadow-[0_1px_2px_rgb(var(--if-accent-strong-rgb)/30%)] ring-1 ring-[rgb(var(--if-accent-light-rgb)/40%)]";
   const segmentInactive =
     "text-neutral-500 hover:bg-neutral-800/50 hover:text-neutral-200";
   const fieldClass = `w-full rounded-lg border border-neutral-800/80 bg-neutral-950/60 px-3 py-2 text-xs text-neutral-100 outline-none transition-colors placeholder:text-neutral-600 ${accentFocus}`;
@@ -218,9 +209,7 @@ export function LogsPage() {
     <div className="flex h-full flex-col gap-5">
       <header className="relative overflow-hidden rounded-2xl border border-neutral-800/80 bg-neutral-900/60 px-5 py-4 ring-1 ring-white/[0.03]">
         <div
-          className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full blur-3xl ${
-            isRose ? "bg-pink-500/10" : "bg-amber-500/10"
-          }`}
+          className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[rgb(var(--if-accent-rgb)/10%)] blur-3xl"
           aria-hidden
         />
         <div className="relative flex flex-wrap items-end justify-between gap-4">
@@ -393,9 +382,7 @@ export function LogsPage() {
 
       {editingId ? (
         <section
-          className={`${panelClass} border-l-2 p-4 md:p-5 ${
-            isRose ? "border-l-pink-500/60" : "border-l-amber-500/60"
-          }`}
+          className={`${panelClass} border-l-2 border-l-[rgb(var(--if-accent-rgb)/60%)] p-4 md:p-5`}
         >
           <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -534,11 +521,7 @@ export function LogsPage() {
         <div className="flex min-h-0 flex-1 flex-col">
           {filteredLogs.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-2xl border border-neutral-800/80 bg-neutral-950/50 ${
-                  isRose ? "text-pink-400/70" : "text-amber-400/70"
-                }`}
-              >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-neutral-800/80 bg-neutral-950/50 text-[rgb(var(--if-accent-light-rgb)/70%)]">
                 <svg
                   viewBox="0 0 24 24"
                   className="h-5 w-5"

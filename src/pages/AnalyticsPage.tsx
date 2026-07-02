@@ -3,7 +3,6 @@ import { StatsCards } from "../components/dashboard/StatsCards";
 import { WeeklyHoursChart } from "../features/analytics/components/WeeklyHoursChart";
 import { CategoryDistributionChart } from "../features/analytics/components/CategoryDistributionChart";
 import { useAppState } from "../state/AppStateProvider";
-import { useTheme } from "../state/ThemeProvider";
 import { getCategoryDistribution, getDeepWorkMinutes } from "../lib/analytics";
 import { formatMinutesHuman } from "../lib/time";
 
@@ -28,13 +27,11 @@ type PeriodNavProps = {
   onPrev: () => void;
   onNext: () => void;
   canGoNext: boolean;
-  isRose: boolean;
 };
 
-function PeriodNav({ onPrev, onNext, canGoNext, isRose }: PeriodNavProps) {
-  const navHover = isRose
-    ? "hover:border-pink-500/50 hover:text-pink-300"
-    : "hover:border-amber-500/50 hover:text-amber-400";
+function PeriodNav({ onPrev, onNext, canGoNext }: PeriodNavProps) {
+  const navHover =
+    "hover:border-[rgb(var(--if-accent-rgb)/50%)] hover:text-[rgb(var(--if-accent-light-rgb))]";
 
   return (
     <div className="inline-flex items-center gap-1">
@@ -89,14 +86,11 @@ export function AnalyticsPage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [monthOffset, setMonthOffset] = useState(0);
   const { logs, categories } = useAppState();
-  const { theme } = useTheme();
-  const isRose = theme === "rose";
 
   const segmentTrack =
     "inline-flex items-center gap-0.5 rounded-full border border-neutral-800/80 bg-neutral-950/50 p-1 backdrop-blur-sm";
-  const segmentActive = isRose
-    ? "bg-pink-500 text-white shadow-sm shadow-pink-950/30 ring-1 ring-pink-400/30"
-    : "bg-amber-500 text-neutral-950 shadow-sm shadow-amber-950/30 ring-1 ring-amber-400/40";
+  const segmentActive =
+    "bg-[rgb(var(--if-accent-rgb))] text-[var(--if-accent-on)] shadow-[0_1px_2px_rgb(var(--if-accent-strong-rgb)/30%)] ring-1 ring-[rgb(var(--if-accent-light-rgb)/40%)]";
   const segmentInactive =
     "text-neutral-500 hover:bg-neutral-800/50 hover:text-neutral-200";
 
@@ -239,9 +233,7 @@ export function AnalyticsPage() {
     <div className="flex h-full flex-col gap-5">
       <header className="relative overflow-hidden rounded-2xl border border-neutral-800/80 bg-neutral-900/60 px-5 py-4 ring-1 ring-white/[0.03]">
         <div
-          className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full blur-3xl ${
-            isRose ? "bg-pink-500/10" : "bg-amber-500/10"
-          }`}
+          className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[rgb(var(--if-accent-rgb)/10%)] blur-3xl"
           aria-hidden
         />
         <div className="relative flex flex-wrap items-end justify-between gap-4">
@@ -257,11 +249,7 @@ export function AnalyticsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <span
-              className={`hidden text-[11px] font-medium tabular-nums sm:inline ${
-                isRose ? "text-pink-300/80" : "text-amber-300/80"
-              }`}
-            >
+            <span className="hidden text-[11px] font-medium tabular-nums text-[rgb(var(--if-accent-light-rgb)/80%)] sm:inline">
               {formatMinutesHuman(totalMinutes)} in range
             </span>
             <div className="flex items-center gap-2">
@@ -312,13 +300,7 @@ export function AnalyticsPage() {
             <span className="rounded-full border border-neutral-800/80 bg-neutral-950/50 px-3 py-1 tabular-nums text-neutral-400">
               Total {formatMinutesHuman(totalMinutes)}
             </span>
-            <span
-              className={`rounded-full border border-neutral-800/80 px-3 py-1 tabular-nums ${
-                isRose
-                  ? "bg-pink-500/10 text-pink-300/90"
-                  : "bg-amber-500/10 text-amber-300/90"
-              }`}
-            >
+            <span className="rounded-full border border-neutral-800/80 bg-[rgb(var(--if-accent-rgb)/10%)] px-3 py-1 tabular-nums text-[rgb(var(--if-accent-light-rgb)/90%)]">
               Deep {formatMinutesHuman(deepMinutes)}
             </span>
           </div>
@@ -399,7 +381,6 @@ export function AnalyticsPage() {
                 onPrev={handlePrevPeriod}
                 onNext={handleNextPeriod}
                 canGoNext={canGoNextPeriod}
-                isRose={isRose}
               />
             </div>
           </header>
@@ -432,7 +413,6 @@ export function AnalyticsPage() {
                 onPrev={handlePrevPeriod}
                 onNext={handleNextPeriod}
                 canGoNext={canGoNextPeriod}
-                isRose={isRose}
               />
             </div>
           </header>

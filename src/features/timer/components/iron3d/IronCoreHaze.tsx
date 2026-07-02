@@ -10,8 +10,18 @@ import {
 } from "three";
 import type { RefObject } from "react";
 import { resolveAuraDepthGate, type IronVisualFrame } from "../../iron/ironVisualState";
+import { getIronThemePalette } from "../../iron/ironThemePalettes";
+import { useTheme } from "../../../../state/ThemeProvider";
 
 const DISC_RADIUS = 1.52;
+
+/** Neutral haze dust stays constant across accents — keeps the nebula from reading as a single-hue blob. */
+const HAZE_DUST_COLOR = "#5a4868";
+
+/** Darkens a hex color toward black by `amount` (0-1), returning a new hex string. */
+function shade(hex: string, amount: number): string {
+  return `#${new Color(hex).lerp(new Color(0x000000), amount).getHexString()}`;
+}
 
 function resolveNebulaIntensity(frame: IronVisualFrame): number {
   const depthGate = resolveAuraDepthGate(frame.depthParam);
@@ -202,6 +212,9 @@ interface IronCoreHazeProps {
 
 /** Spiral galaxy-style gas / dust around the core. */
 export function IronCoreHaze({ frameRef, reduced }: IronCoreHazeProps) {
+  const { accentId } = useTheme();
+  const armColor = getIronThemePalette(accentId).hot;
+
   const galaxyRef = useRef<Group>(null);
   const intensityRef = useRef(0);
   const spinRef = useRef(0);
@@ -226,8 +239,8 @@ export function IronCoreHaze({ frameRef, reduced }: IronCoreHazeProps) {
         layer={0}
         armCount={2.0}
         twist={2.65}
-        armColor="#d4a858"
-        dustColor="#5a4868"
+        armColor={armColor}
+        dustColor={HAZE_DUST_COLOR}
         rotationZ={0}
         scale={1}
         intensityRef={intensityRef}
@@ -237,8 +250,8 @@ export function IronCoreHaze({ frameRef, reduced }: IronCoreHazeProps) {
         layer={1}
         armCount={2.4}
         twist={2.95}
-        armColor="#c09048"
-        dustColor="#484858"
+        armColor={shade(armColor, 0.12)}
+        dustColor={HAZE_DUST_COLOR}
         rotationZ={1.12}
         scale={0.94}
         intensityRef={intensityRef}
@@ -249,8 +262,8 @@ export function IronCoreHaze({ frameRef, reduced }: IronCoreHazeProps) {
           layer={2}
           armCount={1.8}
           twist={2.35}
-          armColor="#b88850"
-          dustColor="#625878"
+          armColor={shade(armColor, 0.2)}
+          dustColor={HAZE_DUST_COLOR}
           rotationZ={-0.65}
           scale={0.88}
           intensityRef={intensityRef}

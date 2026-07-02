@@ -19,6 +19,14 @@ import {
   resolveVeinOrangeStrength,
 } from "./ironVisualState";
 import { IRON_SCENE_TUNING } from "./ironVisualTuning";
+import { getIronThemePalette } from "./ironThemePalettes";
+import type { AccentId } from "../../../state/ThemeProvider";
+
+/** Reads a hex color string into 0-1 RGB components. */
+function hexToRgb01(hex: string): [number, number, number] {
+  const c = new Color(hex);
+  return [c.r, c.g, c.b];
+}
 
 const vertexShader = /* glsl */ `
 varying vec2 vUv;
@@ -133,7 +141,11 @@ export interface IronCoreMaterialUniforms {
   veinUvScale?: number;
 }
 
-export function createIronCoreShaderMaterial(texture: Texture): ShaderMaterial {
+export function createIronCoreShaderMaterial(
+  texture: Texture,
+  accentId: AccentId = "classic",
+): ShaderMaterial {
+  const palette = getIronThemePalette(accentId);
   const ramp = IRON_SCENE_TUNING.coreRamp;
   const orange = IRON_SCENE_TUNING.veinOrange;
   const flood = IRON_SCENE_TUNING.lavaFlood;
@@ -156,12 +168,12 @@ export function createIronCoreShaderMaterial(texture: Texture): ShaderMaterial {
       depthLeak: { value: boot.depthParam },
       glow: { value: boot.glow },
       heat: { value: boot.ironHeat },
-      yellowColor: { value: new Color(ramp.hot) },
-      amberColor: { value: new Color(ramp.amber) },
-      orangeColor: { value: new Color(orange.color) },
+      yellowColor: { value: new Color(palette.hot) },
+      amberColor: { value: new Color(palette.amber) },
+      orangeColor: { value: new Color(palette.orange) },
       shellColor: { value: new Color(ramp.shell) },
       blackColor: { value: new Color(ramp.deep) },
-      seepColor: { value: new Color(ramp.seep) },
+      seepColor: { value: new Color(palette.seep) },
       aaInMul: { value: ramp.aaIn },
       aaOutMul: { value: ramp.aaOut },
       aoStrength: { value: aoStrength },
@@ -170,7 +182,7 @@ export function createIronCoreShaderMaterial(texture: Texture): ShaderMaterial {
       veinFlood: { value: veinFlood },
       floodMix: { value: flood.orangeBias },
       floodEmissionBoost: { value: flood.emissionBoost },
-      floodHotColor: { value: new Color(flood.hot) },
+      floodHotColor: { value: new Color(palette.floodHot) },
     },
     vertexShader,
     fragmentShader,
@@ -189,6 +201,7 @@ export function createIronCoreShaderMaterial(texture: Texture): ShaderMaterial {
       veinUvScale: resolveVeinDetailScale(boot.depthParam),
     },
     boot.ironHeat,
+    accentId,
   );
 
   return material;
@@ -204,7 +217,13 @@ export function applyIronCoreUniforms(
   material: ShaderMaterial,
   stops: IronCoreMaterialUniforms,
   heat: number,
+  accentId: AccentId = "classic",
 ): void {
+  const palette = getIronThemePalette(accentId);
+  const [hotR, hotG, hotB] = hexToRgb01(palette.hot);
+  const [amberR, amberG, amberB] = hexToRgb01(palette.amber);
+  const [orangeR, orangeG, orangeB] = hexToRgb01(palette.orange);
+
   const depthLeak = stops.depthLeak ?? resolveDepthLeak(stops.blackThreshold);
   const depthParam = stops.depthLeak ?? depthLeak;
 
@@ -221,29 +240,42 @@ export function applyIronCoreUniforms(
 
   const yellow = material.uniforms.yellowColor.value as Color;
   yellow.setRGB(
-    0.9 + heat * 0.08 + depthLeak * 0.06,
-    0.64 + heat * 0.14 + depthLeak * 0.08,
-    0.14 + heat * 0.05,
+    hotR + heat * 0.08 + depthLeak * 0.06,
+    hotG + heat * 0.14 + depthLeak * 0.08,
+    hotB + heat * 0.05,
   );
 
   const amber = material.uniforms.amberColor.value as Color;
   amber.setRGB(
-    0.52 + heat * 0.06 + depthLeak * 0.04,
-    0.34 + heat * 0.08 + depthLeak * 0.05,
-    0.08 + heat * 0.02,
+    amberR + heat * 0.06 + depthLeak * 0.04,
+    amberG + heat * 0.08 + depthLeak * 0.05,
+    amberB + heat * 0.02,
   );
 
   const orange = material.uniforms.orangeColor.value as Color;
   orange.setRGB(
-    0.88 + heat * 0.08 + depthLeak * 0.04,
-    0.44 + heat * 0.14 + depthLeak * 0.08,
-    0.12 + heat * 0.05,
+    orangeR + heat * 0.08 + depthLeak * 0.04,
+    orangeG + heat * 0.14 + depthLeak * 0.08,
+    orangeB + heat * 0.05,
   );
+
+  const seep = material.uniforms.seepColor.value as Color;
+  const [seepR, seepG, seepB] = hexToRgb01(palette.seep);
+  seep.setRGB(seepR, seepG, seepB);
+
+  const floodHot = material.uniforms.floodHotColor.value as Color;
+  const [floodR, floodG, floodB] = hexToRgb01(palette.floodHot);
+  floodHot.setRGB(floodR, floodG, floodB);
 }
 
-export function useIronCoreShaderMaterial(texture: Texture | null): ShaderMaterial | null {
+export function useIronCoreShaderMaterial(
+  texture: Texture | null,
+  accentId: AccentId = "classic",
+): ShaderMaterial | null {
   return useMemo(() => {
     if (!texture) return null;
-    return createIronCoreShaderMaterial(texture);
+    return createIronCoreShaderMaterial(texture, accentId);
+    // Initial accent seed only — live accent changes are applied every frame via applyIronCoreUniforms.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [texture]);
 }

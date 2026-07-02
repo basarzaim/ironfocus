@@ -1,6 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 
+import { STORAGE_KEYS } from "../../lib/storageKeys";
+import { getPersistedValue, setPersistedValue } from "../../lib/persistence/persistenceClient";
+
 export type AppViewKey =
   | "focus"
   | "logs"
@@ -8,11 +11,11 @@ export type AppViewKey =
   | "analytics"
   | "settings";
 
-const SIDEBAR_COLLAPSED_KEY = "ironfocus.sidebarCollapsed";
+const SIDEBAR_COLLAPSED_KEY = STORAGE_KEYS.sidebarCollapsed;
 
 function getInitialSidebarCollapsed(): boolean {
   if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+  return getPersistedValue(SIDEBAR_COLLAPSED_KEY) === "1";
 }
 
 type AppShellProps = {
@@ -28,7 +31,7 @@ export function AppShell({ children, activeView, onChangeView }: AppShellProps) 
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(
+    setPersistedValue(
       SIDEBAR_COLLAPSED_KEY,
       sidebarCollapsed ? "1" : "0",
     );

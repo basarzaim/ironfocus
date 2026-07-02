@@ -1,3 +1,4 @@
+import { AppErrorBoundary } from "./components/errors/AppErrorBoundary";
 import { useState, type ReactElement } from "react";
 import { AppShell, type AppViewKey } from "./components/layout/AppShell";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -54,15 +55,17 @@ function AppInner() {
 
 function App() {
   return (
-    <AppStateProvider>
-      <PreferencesProvider>
-        <ThemeProvider>
-          <FocusTimerProvider>
-            <AppInner />
-          </FocusTimerProvider>
-        </ThemeProvider>
-      </PreferencesProvider>
-    </AppStateProvider>
+    <AppErrorBoundary>
+      <AppStateProvider>
+        <PreferencesProvider>
+          <ThemeProvider>
+            <FocusTimerProvider>
+              <AppInner />
+            </FocusTimerProvider>
+          </ThemeProvider>
+        </PreferencesProvider>
+      </AppStateProvider>
+    </AppErrorBoundary>
   );
 }
 

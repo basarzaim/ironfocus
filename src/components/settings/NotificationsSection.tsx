@@ -1,4 +1,9 @@
+import { useEffect, useState } from "react";
 import { usePreferences } from "../../state/PreferencesProvider";
+import {
+  getNotificationPermissionState,
+  requestNotificationPermission,
+} from "../../lib/notificationPermission";
 
 export function NotificationsSection() {
   const {
@@ -6,6 +11,20 @@ export function NotificationsSection() {
     setNotificationsEnabled,
     setCompletionSoundEnabled,
   } = usePreferences();
+  const [permission, setPermission] =
+    useState<"granted" | "denied" | "unknown">("unknown");
+
+  useEffect(() => {
+    void getNotificationPermissionState().then(setPermission);
+  }, []);
+
+  async function handleEnableNotifications() {
+    const next = await requestNotificationPermission();
+    setPermission(next);
+    if (next === "granted") {
+      setNotificationsEnabled(true);
+    }
+  }
 
   return (
     <div className="space-y-3 text-[11px] text-neutral-500">
@@ -16,7 +35,9 @@ export function NotificationsSection() {
           onChange={(e) => setNotificationsEnabled(e.target.checked)}
           className="rounded border-neutral-700 bg-neutral-900"
         />
-        <span className="text-neutral-300">Desktop notifications on focus complete</span>
+        <span className="text-neutral-300">
+          Desktop notifications on focus complete
+        </span>
       </label>
       <label className="flex cursor-pointer items-center gap-2">
         <input
@@ -27,10 +48,26 @@ export function NotificationsSection() {
         />
         <span className="text-neutral-300">Completion sound</span>
       </label>
-      <p className="leading-relaxed">
-        If notifications are blocked, enable IronFocus in Windows Settings →
-        System → Notifications.
-      </p>
+
+      {permission === "denied" && preferences.notificationsEnabled ? (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-amber-100/90">
+          Notifications are blocked by Windows. Enable IronFocus in Settings →
+          System → Notifications, or use the button below to request permission
+          again.
+          <button
+            type="button"
+            onClick={() => void handleEnableNotifications()}
+            className="mt-2 block rounded-md border border-amber-500/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-200"
+          >
+            Request permission
+          </button>
+        </div>
+      ) : (
+        <p className="leading-relaxed">
+          If notifications are blocked, enable IronFocus in Windows Settings →
+          System → Notifications.
+        </p>
+      )}
     </div>
   );
 }

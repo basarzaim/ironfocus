@@ -5,12 +5,15 @@ import { Bloom, EffectComposer } from "@react-three/postprocessing";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import type { IronTimerInput, IronVisualFrame } from "../../iron/ironVisualState";
 import { IRON_SCENE_TUNING } from "../../iron/ironVisualTuning";
+import { resolveVisualQuality } from "../../../../lib/userPreferences";
+import { usePreferences } from "../../../../state/PreferencesProvider";
 import { IronCoreRig } from "./IronCoreRig";
 
 interface IronCoreSceneProps {
   timerRef: React.RefObject<IronTimerInput>;
   frameRef: React.RefObject<IronVisualFrame | null>;
-  reduced: boolean;
+  reducedMotion: boolean;
+  lowQuality: boolean;
 }
 
 function IronBloom({ frameRef }: { frameRef: React.RefObject<IronVisualFrame | null> }) {
@@ -41,27 +44,45 @@ function IronBloom({ frameRef }: { frameRef: React.RefObject<IronVisualFrame | n
   );
 }
 
-function IronCoreScene({ timerRef, frameRef, reduced }: IronCoreSceneProps) {
+function IronCoreScene({
+  timerRef,
+  frameRef,
+  reducedMotion,
+  lowQuality,
+}: IronCoreSceneProps) {
   const lights = IRON_SCENE_TUNING.lights;
+  const envIntensity = lowQuality
+    ? IRON_SCENE_TUNING.environmentIntensity * 0.72
+    : IRON_SCENE_TUNING.environmentIntensity;
 
   return (
     <>
-      <ambientLight intensity={lights.ambient} color="#b9a78e" />
+      <ambientLight
+        intensity={lowQuality ? lights.ambient * 1.15 : lights.ambient}
+        color="#b9a78e"
+      />
       <hemisphereLight args={["#d2b995", "#2a2219", lights.hemisphere]} />
       <pointLight position={[-3.8, 3.2, 5.2]} intensity={lights.key} color="#f7deb2" />
       <pointLight position={[2.1, 1.1, 3.4]} intensity={lights.fill} color="#d49b31" />
       <pointLight position={[0, -2.6, 2.3]} intensity={lights.rim} color="#4a3f31" />
       <Environment
         preset="studio"
-        environmentIntensity={IRON_SCENE_TUNING.environmentIntensity}
+        environmentIntensity={envIntensity}
         background={false}
       />
 
-      <IronCoreRig timerRef={timerRef} frameRef={frameRef} reduced={reduced} />
+      <IronCoreRig
+        timerRef={timerRef}
+        frameRef={frameRef}
+        reducedMotion={reducedMotion}
+        lowQuality={lowQuality}
+      />
 
-      <EffectComposer multisampling={4} enableNormalPass={false}>
-        <IronBloom frameRef={frameRef} />
-      </EffectComposer>
+      {!lowQuality ? (
+        <EffectComposer multisampling={4} enableNormalPass={false}>
+          <IronBloom frameRef={frameRef} />
+        </EffectComposer>
+      ) : null}
     </>
   );
 }
@@ -74,17 +95,21 @@ export interface IronCoreCanvasProps {
 export function IronCoreCanvas({ timer, className }: IronCoreCanvasProps) {
   const timerRef = useRef(timer);
   const frameRef = useRef<IronVisualFrame | null>(null);
-  const [reduced, setReduced] = useState(false);
+  const { preferences } = usePreferences();
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   timerRef.current = timer;
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
+    setPrefersReducedMotion(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, []);
+
+  const lowQuality =
+    resolveVisualQuality(preferences.visualQuality, false) === "low";
 
   return (
     <div className={className}>
@@ -92,7 +117,7 @@ export function IronCoreCanvas({ timer, className }: IronCoreCanvasProps) {
         className="absolute inset-0 h-full w-full"
         gl={{ alpha: true, antialias: false, powerPreference: "high-performance" }}
         camera={{ position: [-2.0, 1.4, 5.4], fov: 38, near: 0.1, far: 100 }}
-        dpr={[1, 2]}
+        dpr={lowQuality ? 1 : [1, IRON_SCENE_TUNING.render.dprMax]}
         style={{ background: "transparent" }}
         onCreated={({ gl, camera }) => {
           gl.setClearColor(0x000000, 0);
@@ -103,7 +128,12 @@ export function IronCoreCanvas({ timer, className }: IronCoreCanvasProps) {
         }}
       >
         <Suspense fallback={null}>
-          <IronCoreScene timerRef={timerRef} frameRef={frameRef} reduced={reduced} />
+          <IronCoreScene
+            timerRef={timerRef}
+            frameRef={frameRef}
+            reducedMotion={prefersReducedMotion}
+            lowQuality={lowQuality}
+          />
         </Suspense>
       </Canvas>
     </div>

@@ -1,4 +1,8 @@
 import type { TimerMode } from "../types/models";
+import {
+  getPersistedValue,
+  setPersistedValue,
+} from "./persistence/persistenceClient";
 import { STORAGE_KEYS } from "./storageKeys";
 
 /** Max session depth scale in cores (180 min). */
@@ -9,14 +13,14 @@ export const GROWTH_PREVIEW_RAMP_SECONDS = 30;
 
 export function getInitialGrowthPreviewEnabled(): boolean {
   if (typeof window === "undefined") return true;
-  const stored = window.localStorage.getItem(STORAGE_KEYS.coreGrowthPreview);
+  const stored = getPersistedValue(STORAGE_KEYS.coreGrowthPreview);
   if (stored === null) return true;
   return stored === "1";
 }
 
 export function setGrowthPreviewEnabled(enabled: boolean): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(
+  setPersistedValue(
     STORAGE_KEYS.coreGrowthPreview,
     enabled ? "1" : "0",
   );

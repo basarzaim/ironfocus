@@ -22,11 +22,13 @@ export function DataManagementSection() {
     importFromJson,
     clearAllData,
     lastRetentionRemovedCount,
+    storageIssues,
+    storageWriteError,
+    clearStorageWriteError,
   } = useAppState();
   const { preferences, setRetentionPolicy, applyRetentionNow } =
     usePreferences();
-  const { theme } = useTheme();
-  const isRose = theme === "rose";
+  const { accentId, setAccentId } = useTheme();
 
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,14 +37,13 @@ export function DataManagementSection() {
   );
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const accentBtn = isRose
-    ? "border-pink-500/60 bg-pink-600/80 text-neutral-50 hover:bg-pink-500"
-    : "border-amber-500/60 bg-amber-600/80 text-neutral-950 hover:bg-amber-500";
+  const accentBtn =
+    "border-[rgb(var(--if-accent-rgb)/60%)] bg-[rgb(var(--if-accent-strong-rgb)/80%)] text-[var(--if-accent-on)] hover:bg-[rgb(var(--if-accent-rgb))]";
 
   async function handleExport() {
     setError(null);
     setMessage(null);
-    const payload = exportSnapshot();
+    const payload = exportSnapshot(accentId);
     const result = await saveBackupToFile(payload);
     if (!result.ok) {
       if (result.error !== "Export cancelled.") {
@@ -83,6 +84,7 @@ export function DataManagementSection() {
         `Merged: +${result.stats.logsAdded} logs, +${result.stats.categoriesAdded} categories (${result.stats.logsSkipped} logs skipped as duplicates).`,
       );
     } else {
+      setAccentId(importPreview.payload.accentId ?? "classic");
       setMessage("Data replaced from backup.");
     }
   }
@@ -119,6 +121,23 @@ export function DataManagementSection() {
 
   return (
     <div className="space-y-3">
+      {storageWriteError ? (
+        <div className="rounded-md border border-red-500/40 bg-red-950/30 p-3 text-[11px] text-red-200">
+          Could not save data: {storageWriteError}. Export a backup now.
+          <button
+            type="button"
+            onClick={clearStorageWriteError}
+            className="ml-2 underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+      {storageIssues.length > 0 ? (
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-100/90">
+          {storageIssues.join(" ")} Try importing a backup if data looks wrong.
+        </div>
+      ) : null}
       <p className="text-[11px] leading-relaxed text-neutral-500">
         Data stays on this device until cloud sync arrives. Export regularly
         before imports or retention cleanup.

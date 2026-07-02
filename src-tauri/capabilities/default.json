@@ -10,6 +10,17 @@
     "opener:default",
     "notification:default",
     "dialog:default",
-    "fs:default"
+    "store:default",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "$DOCUMENT/**",
+        "$DOWNLOAD/**",
+        "$DESKTOP/**",
+        "$HOME/**"
+      ]
+    }
   ]
 }

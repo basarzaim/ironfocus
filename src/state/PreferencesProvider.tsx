@@ -11,6 +11,7 @@ import {
   saveUserPreferences,
   type RetentionPolicy,
   type UserPreferences,
+  type VisualQuality,
 } from "../lib/userPreferences";
 import { useAppState } from "./AppStateProvider";
 
@@ -19,6 +20,7 @@ type PreferencesContextValue = {
   setNotificationsEnabled: (enabled: boolean) => void;
   setCompletionSoundEnabled: (enabled: boolean) => void;
   setRetentionPolicy: (policy: RetentionPolicy) => void;
+  setVisualQuality: (quality: VisualQuality) => void;
   applyRetentionNow: () => number;
 };
 
@@ -66,6 +68,13 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
     [persist, preferences],
   );
 
+  const setVisualQuality = useCallback(
+    (quality: VisualQuality) => {
+      persist({ ...preferences, visualQuality: quality });
+    },
+    [persist, preferences],
+  );
+
   const applyRetentionNow = useCallback(() => {
     return pruneLogsByRetentionPolicy();
   }, [pruneLogsByRetentionPolicy]);
@@ -76,6 +85,7 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
       setNotificationsEnabled,
       setCompletionSoundEnabled,
       setRetentionPolicy,
+      setVisualQuality,
       applyRetentionNow,
     }),
     [
@@ -83,6 +93,7 @@ export function PreferencesProvider({ children }: PreferencesProviderProps) {
       setNotificationsEnabled,
       setCompletionSoundEnabled,
       setRetentionPolicy,
+      setVisualQuality,
       applyRetentionNow,
     ],
   );

@@ -1,5 +1,6 @@
 import type { Category, LogEntry } from "../types/models";
 import { PRODUCT_INFO } from "../config/productInfo";
+import { ACCENT_IDS, type AccentId } from "../state/ThemeProvider";
 
 export const BACKUP_SCHEMA_VERSION = 1 as const;
 
@@ -9,7 +10,13 @@ export type BackupPayload = {
   appVersion: string;
   categories: Category[];
   logs: LogEntry[];
+  /** Optional — absent in backups created before the accent theme system; falls back to "classic". */
+  accentId?: AccentId;
 };
+
+function isAccentId(value: unknown): value is AccentId {
+  return typeof value === "string" && (ACCENT_IDS as string[]).includes(value);
+}
 
 export type MergeResult = {
   categoriesAdded: number;
@@ -52,6 +59,7 @@ function isLogEntry(value: unknown): value is LogEntry {
 export function createBackupPayload(
   categories: Category[],
   logs: LogEntry[],
+  accentId?: AccentId,
 ): BackupPayload {
   return {
     schemaVersion: BACKUP_SCHEMA_VERSION,
@@ -59,6 +67,7 @@ export function createBackupPayload(
     appVersion: PRODUCT_INFO.version,
     categories,
     logs,
+    accentId,
   };
 }
 
@@ -113,6 +122,7 @@ export function validateBackupPayload(
         typeof raw.appVersion === "string" ? raw.appVersion : "unknown",
       categories: raw.categories as Category[],
       logs: raw.logs as LogEntry[],
+      accentId: isAccentId(raw.accentId) ? raw.accentId : "classic",
     },
   };
 }

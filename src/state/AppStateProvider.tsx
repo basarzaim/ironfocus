@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -23,10 +24,20 @@ import {
   pruneLogsByRetention,
   saveUserPreferences,
 } from "../lib/userPreferences";
+import {
+  getPersistedValue,
+  persistenceClient,
+  setPersistedValue,
+} from "../lib/persistence/persistenceClient";
+import { backupKeyFor, parsePersistedAppData } from "../lib/persistence/recover";
+import type { AccentId } from "./ThemeProvider";
 
 type AppStateContextValue = {
   categories: Category[];
   logs: LogEntry[];
+  storageIssues: string[];
+  storageWriteError: string | null;
+  clearStorageWriteError: () => void;
   addCategory: (name: string) => void;
   updateCategory: (id: string, name: string) => void;
   updateCategoryColor: (id: string, color: string) => void;
@@ -50,7 +61,7 @@ type AppStateContextValue = {
     endTime: string;
     notes: string;
   }) => { ok: true } | { ok: false; error: string };
-  exportSnapshot: () => BackupPayload;
+  exportSnapshot: (accentId?: AccentId) => BackupPayload;
   importSnapshotMerge: (
     payload: BackupPayload,
   ) => { ok: true; stats: MergeResult } | { ok: false; error: string };
@@ -100,30 +111,24 @@ function createInitialCategories(): Category[] {
   }));
 }
 
-function loadCategories(): Category[] {
-  if (typeof window === "undefined") return createInitialCategories();
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEYS.categories);
-    if (!raw) return createInitialCategories();
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return createInitialCategories();
-    return parsed as Category[];
-  } catch {
-    return createInitialCategories();
-  }
-}
+function loadInitialAppData(): {
+  categories: Category[];
+  logs: LogEntry[];
+  issues: string[];
+} {
+  const parsed = parsePersistedAppData({
+    categoriesRaw: getPersistedValue(STORAGE_KEYS.categories),
+    categoriesBackupRaw: getPersistedValue(STORAGE_KEYS.categoriesBackup),
+    logsRaw: getPersistedValue(STORAGE_KEYS.logs),
+    logsBackupRaw: getPersistedValue(STORAGE_KEYS.logsBackup),
+    createDefaultCategories: createInitialCategories,
+  });
 
-function loadLogs(): LogEntry[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEYS.logs);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed as LogEntry[];
-  } catch {
-    return [];
+  for (const issue of parsed.issues) {
+    persistenceClient.addLoadIssue("app-data", issue);
   }
+
+  return parsed;
 }
 
 function shouldRunRetentionToday(lastRunAt: string | null, now = new Date()): boolean {
@@ -137,30 +142,58 @@ type AppStateProviderProps = {
 };
 
 export function AppStateProvider({ children }: AppStateProviderProps) {
-  const [categories, setCategories] = useState<Category[]>(loadCategories);
-  const [logs, setLogs] = useState<LogEntry[]>(loadLogs);
+  const initialData = useMemo(() => loadInitialAppData(), []);
+  const [categories, setCategories] = useState<Category[]>(
+    initialData.categories,
+  );
+  const [logs, setLogs] = useState<LogEntry[]>(initialData.logs);
+  const [storageIssues] = useState<string[]>(initialData.issues);
+  const [storageWriteError, setStorageWriteError] = useState<string | null>(
+    null,
+  );
   const [lastRetentionRemovedCount, setLastRetentionRemovedCount] = useState(0);
+  const categoriesBackupRef = useRef<string | null>(null);
+  const logsBackupRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem(
-        STORAGE_KEYS.categories,
-        JSON.stringify(categories),
-      );
+      const serialized = JSON.stringify(categories);
+      if (categoriesBackupRef.current !== serialized) {
+        const previous = getPersistedValue(STORAGE_KEYS.categories);
+        if (previous) {
+          setPersistedValue(STORAGE_KEYS.categoriesBackup, previous);
+        }
+        categoriesBackupRef.current = serialized;
+      }
+      setPersistedValue(STORAGE_KEYS.categories, serialized);
     } catch {
-      // ignore storage errors
+      setStorageWriteError("Could not save categories.");
     }
   }, [categories]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem(STORAGE_KEYS.logs, JSON.stringify(logs));
+      const serialized = JSON.stringify(logs);
+      if (logsBackupRef.current !== serialized) {
+        const previous = getPersistedValue(STORAGE_KEYS.logs);
+        if (previous) {
+          setPersistedValue(backupKeyFor(STORAGE_KEYS.logs), previous);
+        }
+        logsBackupRef.current = serialized;
+      }
+      setPersistedValue(STORAGE_KEYS.logs, serialized);
     } catch {
-      // ignore storage errors
+      setStorageWriteError("Could not save logs.");
     }
   }, [logs]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      const error = persistenceClient.getLastWriteError();
+      if (error) setStorageWriteError(error);
+    }, 500);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const preferences = loadUserPreferences();
@@ -250,6 +283,12 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     () => ({
       categories,
       logs,
+      storageIssues,
+      storageWriteError,
+      clearStorageWriteError: () => {
+        persistenceClient.clearWriteError();
+        setStorageWriteError(null);
+      },
       lastRetentionRemovedCount,
       addCategory(name) {
         const trimmed = name.trim();
@@ -342,8 +381,8 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
         setLogs((prev) => prev.map((l) => (l.id === id ? build.log : l)));
         return { ok: true as const };
       },
-      exportSnapshot() {
-        return createBackupPayload(categories, logs);
+      exportSnapshot(accentId) {
+        return createBackupPayload(categories, logs, accentId);
       },
       importSnapshotMerge(payload) {
         const merged = mergeBackupData(categories, logs, payload);
@@ -398,7 +437,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
         return removedCount;
       },
     }),
-    [categories, logs, lastRetentionRemovedCount],
+    [categories, logs, lastRetentionRemovedCount, storageIssues, storageWriteError],
   );
 
   return (

@@ -1,12 +1,19 @@
+import {
+  getPersistedValue,
+  persistenceClient,
+  setPersistedValue,
+} from "./persistence/persistenceClient";
 import { STORAGE_KEYS } from "./storageKeys";
 
 export type RetentionPolicy = "all" | 90 | 180 | 365;
+export type VisualQuality = "auto" | "high" | "low";
 
 export type UserPreferences = {
   notificationsEnabled: boolean;
   completionSoundEnabled: boolean;
   retentionPolicy: RetentionPolicy;
   lastRetentionRunAt: string | null;
+  visualQuality: VisualQuality;
 };
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -14,16 +21,20 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   completionSoundEnabled: true,
   retentionPolicy: "all",
   lastRetentionRunAt: null,
+  visualQuality: "auto",
 };
 
 function isRetentionPolicy(value: unknown): value is RetentionPolicy {
   return value === "all" || value === 90 || value === 180 || value === 365;
 }
 
+function isVisualQuality(value: unknown): value is VisualQuality {
+  return value === "auto" || value === "high" || value === "low";
+}
+
 export function loadUserPreferences(): UserPreferences {
-  if (typeof window === "undefined") return { ...DEFAULT_PREFERENCES };
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEYS.userPreferences);
+    const raw = getPersistedValue(STORAGE_KEYS.userPreferences);
     if (!raw) return { ...DEFAULT_PREFERENCES };
     const parsed = JSON.parse(raw) as Partial<UserPreferences>;
     return {
@@ -39,6 +50,9 @@ export function loadUserPreferences(): UserPreferences {
         typeof parsed.lastRetentionRunAt === "string"
           ? parsed.lastRetentionRunAt
           : DEFAULT_PREFERENCES.lastRetentionRunAt,
+      visualQuality: isVisualQuality(parsed.visualQuality)
+        ? parsed.visualQuality
+        : DEFAULT_PREFERENCES.visualQuality,
     };
   } catch {
     return { ...DEFAULT_PREFERENCES };
@@ -46,20 +60,35 @@ export function loadUserPreferences(): UserPreferences {
 }
 
 export function saveUserPreferences(preferences: UserPreferences): void {
-  if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(
+    setPersistedValue(
       STORAGE_KEYS.userPreferences,
       JSON.stringify(preferences),
     );
   } catch {
-    // ignore storage errors
+    persistenceClient.getLastWriteError();
   }
 }
 
 export function getRetentionDays(policy: RetentionPolicy): number | null {
   if (policy === "all") return null;
   return policy;
+}
+
+export function resolveVisualQuality(
+  preference: VisualQuality,
+  prefersReducedMotion: boolean,
+): "high" | "low" {
+  if (prefersReducedMotion) return "low";
+  if (preference === "low") return "low";
+  if (preference === "high") return "high";
+
+  if (typeof navigator !== "undefined") {
+    const cores = navigator.hardwareConcurrency ?? 8;
+    if (cores <= 4) return "low";
+  }
+
+  return "high";
 }
 
 export function pruneLogsByRetention(
